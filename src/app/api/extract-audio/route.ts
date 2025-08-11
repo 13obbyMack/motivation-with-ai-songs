@@ -12,18 +12,15 @@ if (process.env.NODE_ENV === 'production') {
   // Store original methods
   const originalWriteFileSync = fs.writeFileSync;
   const originalOpenSync = fs.openSync;
-  const originalWriteSync = fs.writeSync;
-  const originalCloseSync = fs.closeSync;
   
   // Override writeFileSync to redirect debug files to /tmp
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fs.writeFileSync = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, options?: fs.WriteFileOptions) {
     if (typeof filePath === 'string' && (filePath.includes('watch.html') || filePath.includes('.html'))) {
       try {
         const fileName = path.basename(filePath);
         const tmpPath = path.join('/tmp', fileName);
         return originalWriteFileSync.call(this, tmpPath, data, options);
-      } catch (error) {
+      } catch {
         // Silently ignore debug file write errors
         console.warn('Debug file write ignored:', filePath);
         return;
@@ -33,20 +30,19 @@ if (process.env.NODE_ENV === 'production') {
   };
   
   // Override openSync to redirect debug files to /tmp
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  fs.openSync = function(path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) {
-    if (typeof path === 'string' && (path.includes('watch.html') || path.includes('.html'))) {
+  fs.openSync = function(filePath: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode | null) {
+    if (typeof filePath === 'string' && (filePath.includes('watch.html') || filePath.includes('.html'))) {
       try {
-        const fileName = path.split('/').pop() || path.split('\\').pop() || 'debug.html';
+        const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'debug.html';
         const tmpPath = `/tmp/${fileName}`;
         return originalOpenSync.call(this, tmpPath, flags, mode);
-      } catch (error) {
+      } catch {
         // Return a dummy file descriptor that won't cause issues
-        console.warn('Debug file open ignored:', path);
+        console.warn('Debug file open ignored:', filePath);
         throw new Error('ENOENT: no such file or directory');
       }
     }
-    return originalOpenSync.call(this, path, flags, mode);
+    return originalOpenSync.call(this, filePath, flags, mode);
   };
 }
 
