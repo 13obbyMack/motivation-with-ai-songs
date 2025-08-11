@@ -21,8 +21,9 @@
 /build
 
 # misc
-.kiro/*
-.github/workflows
+/.kiro
+/.github
+/scripts
 VERCEL_DEPLOYMENT_GUIDE.md
 /docs
 .DS_Store

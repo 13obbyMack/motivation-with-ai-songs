@@ -3,8 +3,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.kiro/*
-.github/workflows
+/.kiro/*
+/.github
 VERCEL_DEPLOYMENT_GUIDE.md
 .vercel/*
 
@@ -15,9 +15,10 @@ coverage/
 **/*.test.tsx
 **/*.spec.ts
 **/*.spec.tsx
+/scripts
 
 # IDE and editor files
-.vscode/
+/.vscode/
 .idea/
 *.swp
 *.swo
