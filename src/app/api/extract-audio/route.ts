@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import ytdl from "@distube/ytdl-core";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
 
+// Disable debug mode in production to prevent file system writes
+if (process.env.NODE_ENV === 'production') {
+  process.env.YTDL_NO_UPDATE = 'true';
+}
+
 // YouTube URL validation regex
 const YOUTUBE_URL_REGEX =
   /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(\S*)?$/;
@@ -42,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Check if URL is valid and accessible
     let videoInfo;
     try {
-      // Configure ytdl with options to avoid bot detection
+      // Configure ytdl with options to avoid bot detection and disable debug files
       const ytdlOptions = {
         requestOptions: {
           headers: {
@@ -54,7 +59,10 @@ export async function POST(request: NextRequest) {
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
           }
-        }
+        },
+        // Disable debug file saving for serverless environments
+        debug: false,
+        lang: 'en'
       };
 
       const isValid = await ytdl.validateURL(trimmedUrl);
@@ -180,7 +188,10 @@ export async function POST(request: NextRequest) {
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
           }
-        }
+        },
+        // Disable debug file saving for serverless environments
+        debug: false,
+        lang: 'en'
       });
 
       // Collect audio data chunks
