@@ -21,8 +21,8 @@
       "memory": 256
     },
     "src/app/api/get-voices/route.ts": {
-      "maxDuration": 10,
-      "memory": 256
+      "maxDuration": 30,
+      "memory": 512
     },
     "src/app/api/health/route.ts": {
       "maxDuration": 10,
