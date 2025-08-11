@@ -1,36 +1,172 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Motivation Song Generator
 
-## Getting Started
+Create personalized motivational audio content by combining your favorite music with AI-generated motivational speeches.
 
-First, run the development server:
+## ✨ Features
+
+- **🤖 AI-Powered Content**: Generate personalized motivational speeches using OpenAI GPT-4o/GPT-4o-mini
+- **🎤 High-Quality Voice Synthesis**: Convert text to natural-sounding speech with ElevenLabs (multiple model options)
+- **🎵 Advanced Audio Processing**: Professional audio mixing with FFmpeg integration
+- **🎯 Smart Content Distribution**: Intelligently distribute motivational content throughout your music
+- **🔧 Model Selection**: Choose between quality, speed, or balanced ElevenLabs models
+- **🎛️ Advanced Audio Splicing**: Crossfade transitions, volume balancing, and intelligent placement
+- **🔒 Privacy-First**: API keys stored locally, no personal data sent to servers
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+You'll need API keys from:
+- **OpenAI** ([platform.openai.com](https://platform.openai.com)) - for text generation
+- **ElevenLabs** ([elevenlabs.io](https://elevenlabs.io)) - for voice synthesis
+
+### Using the Application
+
+1. **Configure API Keys**
+   - Enter your OpenAI and ElevenLabs API keys
+   - Keys are stored securely in your browser session only
+
+2. **Personalize Your Content**
+   - Enter your name and create a custom character prompt
+   - Choose your preferred ElevenLabs model (quality vs speed)
+   - Select an ElevenLabs voice that matches your character
+   - Specify your physical activity or goal
+   - Add custom instructions (optional)
+
+3. **Select Background Music**
+   - Provide a YouTube URL for your preferred background music
+   - Instrumental tracks work best for clear speech integration
+
+4. **Generate Your Song**
+   - Advanced AI processing with chunk-based TTS generation
+   - Professional audio mixing with crossfade transitions
+   - Intelligent distribution of motivational content
+   - Download your high-quality personalized motivational audio
+
+## 💰 Cost Information
+
+### Typical Usage Costs
+- **OpenAI**: ~$0.01-0.05 per song (depending on complexity)
+- **ElevenLabs**: 200-800 characters per song (free tier: 10,000 chars/month, up to 10k chars per request)
+
+### Monthly Estimates
+- **Light usage** (5-10 songs): $1-5
+- **Regular usage** (20-30 songs): $5-15
+- **Heavy usage** (50+ songs): $15-50
+
+## 🛠️ For Developers
+
+### Development Setup
 
 ```bash
+# Clone the repository
+git clone <repository-url>
+cd ai-motivation-song-generator
+
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Available Scripts
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # TypeScript type checking
+npm run deploy       # Deploy to Vercel
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Tech Stack
 
-## Learn More
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Audio Processing**: Server-side with fluent-ffmpeg
+- **APIs**: OpenAI GPT, ElevenLabs TTS
+- **Deployment**: Vercel
 
-To learn more about Next.js, take a look at the following resources:
+### Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/                 # Next.js app router pages
+│   ├── api/            # API routes
+│   ├── layout.tsx      # Root layout
+│   └── page.tsx        # Home page
+├── components/          # React components
+│   ├── ui/             # Reusable UI components
+│   └── ...             # Feature-specific components
+├── contexts/           # React contexts
+├── types/              # TypeScript type definitions
+└── utils/              # Utility functions
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔒 Privacy & Security
 
-## Deploy on Vercel
+- **API Keys**: Stored only in browser session storage, never on servers
+- **Audio Files**: Processed temporarily and automatically deleted
+- **Personal Data**: No personal information stored or transmitted to servers
+- **HTTPS**: All communications encrypted in transit
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎯 Character Prompt Examples
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Instead of predefined speakers, you can now create your own custom character prompts. Here are some examples:
+
+- **Military Drill Sergeant** - "You are a tough military drill sergeant who pushes people to their limits with discipline and no-nonsense attitude"
+- **Energetic Life Coach** - "You are an energetic life coach who uses positive psychology and uplifting language to inspire action"
+- **Wise Mentor** - "You are a wise mentor who speaks with philosophical insights and gentle guidance to help people find their inner strength"
+- **Sports Coach** - "You are an intense sports coach who motivates athletes with competitive spirit and tactical advice"
+- **Spiritual Guide** - "You are a spiritual guide who combines mindfulness with practical motivation to help people overcome challenges"
+- **Business Mentor** - "You are a successful entrepreneur who shares practical business wisdom and hustle mentality"
+- **Fitness Trainer** - "You are a passionate fitness trainer who motivates people to push through physical and mental barriers"
+- **Therapist** - "You are a supportive therapist who uses evidence-based techniques to help people build confidence and resilience"
+
+### Voice Selection
+
+After creating your character prompt, select an appropriate ElevenLabs voice that matches your character's personality and speaking style.
+
+## 🎵 Music Recommendations
+
+### Best Results
+- ✅ Instrumental tracks (no vocals)
+- ✅ 3-5 minute duration
+- ✅ Moderate tempo
+- ✅ High-quality uploads
+
+### Avoid
+- ❌ Songs with constant vocals
+- ❌ Very short or very long tracks
+- ❌ Poor audio quality
+- ❌ Live recordings with crowd noise
+
+## 🆘 Common Issues
+
+### API Key Problems
+- Verify keys are correct and accounts have sufficient credits
+- Ensure billing information is set up for both services
+
+### YouTube Issues
+- Ensure videos are public and high-quality
+- Try different videos if extraction fails
+
+### Processing Failures
+- Try shorter songs and stable internet connection
+- Close other browser tabs to free memory
+
+### Audio Quality
+- Use instrumental tracks for best speech integration
+- Ensure source video has good audio quality
+
+## 📄 License
+
+This project is for personal use only. Please respect all API terms of service and copyright laws when using external content.
+
+---
+
+**Ready to get motivated?** Start creating your personalized motivational songs today! 🎵💪

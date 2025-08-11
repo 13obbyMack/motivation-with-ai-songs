@@ -1,0 +1,92 @@
+{
+  "functions": {
+    "src/app/api/extract-audio/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "src/app/api/splice-audio/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "src/app/api/splice-audio-blob/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "src/app/api/generate-speech/route.ts": {
+      "maxDuration": 30,
+      "memory": 512
+    },
+    "src/app/api/generate-text/route.ts": {
+      "maxDuration": 15,
+      "memory": 256
+    },
+    "src/app/api/get-voices/route.ts": {
+      "maxDuration": 10,
+      "memory": 256
+    },
+    "src/app/api/health/route.ts": {
+      "maxDuration": 10,
+      "memory": 256
+    }
+  },
+  "regions": ["iad1", "sfo1", "lhr1"],
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm ci",
+  "devCommand": "npm run dev:verbose",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "origin-when-cross-origin"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type"
+        }
+      ]
+    },
+    {
+      "source": "/_next/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  "trailingSlash": false,
+  "cleanUrls": true
+}

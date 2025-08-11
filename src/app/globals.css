@@ -1,26 +1,317 @@
 @import "tailwindcss";
 
+/* CSS Custom Properties for Theme System */
 :root {
+  /* Light theme colors */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #3b82f6;
+  --primary-foreground: #f8fafc;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #3b82f6;
+  --radius: 0.5rem;
+  
+  /* Success and warning colors */
+  --success: #22c55e;
+  --success-foreground: #f0fdf4;
+  --warning: #f59e0b;
+  --warning-foreground: #fefce8;
+  --info: #06b6d4;
+  --info-foreground: #f0fdfa;
+  
+  /* Audio player specific */
+  --audio-bg: #f8fafc;
+  --audio-progress: #3b82f6;
+  --audio-control: #64748b;
+  
+  /* Progress indicators */
+  --progress-bg: #e2e8f0;
+  --progress-fill: #3b82f6;
+  
+  /* Form elements */
+  --form-bg: #ffffff;
+  --form-border: #d1d5db;
+  --form-focus: #3b82f6;
+  --form-error: #ef4444;
+  --form-success: #22c55e;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark theme colors */
+[data-theme="dark"] {
+  --background: #020617;
+  --foreground: #f8fafc;
+  --card: #0f172a;
+  --card-foreground: #f8fafc;
+  --popover: #0f172a;
+  --popover-foreground: #f8fafc;
+  --primary: #3b82f6;
+  --primary-foreground: #0f172a;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e293b;
+  --accent-foreground: #f8fafc;
+  --destructive: #ef4444;
+  --destructive-foreground: #f8fafc;
+  --border: #1e293b;
+  --input: #1e293b;
+  --ring: #3b82f6;
+  
+  /* Success and warning colors for dark mode */
+  --success: #22c55e;
+  --success-foreground: #0f172a;
+  --warning: #f59e0b;
+  --warning-foreground: #0f172a;
+  --info: #06b6d4;
+  --info-foreground: #0f172a;
+  
+  /* Audio player dark mode */
+  --audio-bg: #1e293b;
+  --audio-progress: #3b82f6;
+  --audio-control: #94a3b8;
+  
+  /* Progress indicators dark mode */
+  --progress-bg: #1e293b;
+  --progress-fill: #3b82f6;
+  
+  /* Form elements dark mode */
+  --form-bg: #0f172a;
+  --form-border: #334155;
+  --form-focus: #3b82f6;
+  --form-error: #ef4444;
+  --form-success: #22c55e;
 }
 
+/* Auto dark mode based on system preference */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme]) {
+    --background: #020617;
+    --foreground: #f8fafc;
+    --card: #0f172a;
+    --card-foreground: #f8fafc;
+    --popover: #0f172a;
+    --popover-foreground: #f8fafc;
+    --primary: #3b82f6;
+    --primary-foreground: #0f172a;
+    --secondary: #1e293b;
+    --secondary-foreground: #f8fafc;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+    --destructive: #ef4444;
+    --destructive-foreground: #f8fafc;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #3b82f6;
+    
+    --success: #22c55e;
+    --success-foreground: #0f172a;
+    --warning: #f59e0b;
+    --warning-foreground: #0f172a;
+    --info: #06b6d4;
+    --info-foreground: #0f172a;
+    
+    --audio-bg: #1e293b;
+    --audio-progress: #3b82f6;
+    --audio-control: #94a3b8;
+    
+    --progress-bg: #1e293b;
+    --progress-fill: #3b82f6;
+    
+    --form-bg: #0f172a;
+    --form-border: #334155;
+    --form-focus: #3b82f6;
+    --form-error: #ef4444;
+    --form-success: #22c55e;
   }
 }
 
+@theme inline {
+  /* Base colors using CSS custom properties */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  /* Extended colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  
+  /* Component specific colors */
+  --color-audio-bg: var(--audio-bg);
+  --color-audio-progress: var(--audio-progress);
+  --color-audio-control: var(--audio-control);
+  --color-progress-bg: var(--progress-bg);
+  --color-progress-fill: var(--progress-fill);
+  --color-form-bg: var(--form-bg);
+  --color-form-border: var(--form-border);
+  --color-form-focus: var(--form-focus);
+  --color-form-error: var(--form-error);
+  --color-form-success: var(--form-success);
+  
+  /* Typography */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  /* Border radius */
+  --radius: var(--radius);
+}
+
+/* Base styles */
+* {
+  border-color: var(--border);
+}
+
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.2s ease-in-out, 
+              border-color 0.2s ease-in-out, 
+              color 0.2s ease-in-out;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+/* Utility classes for animations */
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+/* Progress bar animation */
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-indeterminate::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--progress-fill),
+    transparent
+  );
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
