@@ -42,6 +42,21 @@ export async function POST(request: NextRequest) {
     // Check if URL is valid and accessible
     let videoInfo;
     try {
+      // Configure ytdl with options to avoid bot detection
+      const ytdlOptions = {
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+          }
+        }
+      };
+
       const isValid = await ytdl.validateURL(trimmedUrl);
       if (!isValid) {
         return NextResponse.json<ExtractAudioResponse>(
@@ -56,9 +71,46 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      videoInfo = await ytdl.getInfo(trimmedUrl);
+      // Retry logic for bot detection issues
+      let retries = 3;
+      let lastError;
+      
+      while (retries > 0) {
+        try {
+          videoInfo = await ytdl.getInfo(trimmedUrl, ytdlOptions);
+          break; // Success, exit retry loop
+        } catch (err) {
+          lastError = err;
+          retries--;
+          
+          if (retries > 0) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, (4 - retries) * 1000));
+          }
+        }
+      }
+      
+      if (!videoInfo) {
+        throw lastError;
+      }
     } catch (error) {
       console.error("Error validating YouTube URL:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('Sign in to confirm')) {
+        return NextResponse.json<ExtractAudioResponse>(
+          {
+            audioData: "",
+            duration: 0,
+            title: "",
+            success: false,
+            error: "YouTube is blocking access to this video. Please try again in a few minutes or use a different video.",
+          },
+          { status: 429 }
+        );
+      }
+      
       return NextResponse.json<ExtractAudioResponse>(
         {
           audioData: "",
@@ -118,6 +170,17 @@ export async function POST(request: NextRequest) {
       const audioStream = ytdl(trimmedUrl, {
         format: bestAudioFormat,
         quality: "highestaudio",
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+          }
+        }
       });
 
       // Collect audio data chunks
