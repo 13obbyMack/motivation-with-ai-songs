@@ -5,6 +5,8 @@ import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
 // Disable debug mode in production to prevent file system writes
 if (process.env.NODE_ENV === 'production') {
   process.env.YTDL_NO_UPDATE = 'true';
+  // Additional environment variables to prevent file writes
+  process.env.YTDL_DEBUG = 'false';
 }
 
 // YouTube URL validation regex
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Check if URL is valid and accessible
     let videoInfo;
     try {
-      // Configure ytdl with options to avoid bot detection and disable debug files
+      // Configure ytdl with options to avoid bot detection
       const ytdlOptions = {
         requestOptions: {
           headers: {
@@ -59,10 +61,7 @@ export async function POST(request: NextRequest) {
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
           }
-        },
-        // Disable debug file saving for serverless environments
-        debug: false,
-        lang: 'en'
+        }
       };
 
       const isValid = await ytdl.validateURL(trimmedUrl);
@@ -188,10 +187,7 @@ export async function POST(request: NextRequest) {
             'Connection': 'keep-alive',
             'Upgrade-Insecure-Requests': '1',
           }
-        },
-        // Disable debug file saving for serverless environments
-        debug: false,
-        lang: 'en'
+        }
       });
 
       // Collect audio data chunks
