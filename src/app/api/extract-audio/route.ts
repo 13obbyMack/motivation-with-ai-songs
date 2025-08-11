@@ -10,10 +10,10 @@ if (process.env.NODE_ENV === 'production') {
   process.env.YTDL_DEBUG = 'false';
   
   const originalWriteFileSync = fs.writeFileSync;
-  const originalWriteFile = fs.writeFile;
   
   // Override writeFileSync to redirect debug files to /tmp
-  fs.writeFileSync = function(filePath: any, data: any, options?: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fs.writeFileSync = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, options?: fs.WriteFileOptions) {
     if (typeof filePath === 'string' && filePath.includes('watch.html')) {
       // Redirect debug files to /tmp directory
       const fileName = path.basename(filePath);
@@ -21,17 +21,6 @@ if (process.env.NODE_ENV === 'production') {
       return originalWriteFileSync.call(this, tmpPath, data, options);
     }
     return originalWriteFileSync.call(this, filePath, data, options);
-  };
-  
-  // Override writeFile to redirect debug files to /tmp
-  fs.writeFile = function(filePath: any, data: any, options?: any, callback?: unknown) {
-    if (typeof filePath === 'string' && filePath.includes('watch.html')) {
-      // Redirect debug files to /tmp directory
-      const fileName = path.basename(filePath);
-      const tmpPath = path.join('/tmp', fileName);
-      return originalWriteFile.call(this, tmpPath, data, options, callback);
-    }
-    return originalWriteFile.call(this, filePath, data, options, callback);
   };
 }
 
