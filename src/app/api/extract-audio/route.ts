@@ -4,23 +4,49 @@ import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
 import fs from 'fs';
 import path from 'path';
 
-// Monkey-patch fs.writeFileSync to redirect debug files to /tmp in production
+// Comprehensive filesystem monkey-patch for production
 if (process.env.NODE_ENV === 'production') {
   process.env.YTDL_NO_UPDATE = 'true';
   process.env.YTDL_DEBUG = 'false';
   
+  // Store original methods
   const originalWriteFileSync = fs.writeFileSync;
+  const originalOpenSync = fs.openSync;
+  const originalWriteSync = fs.writeSync;
+  const originalCloseSync = fs.closeSync;
   
   // Override writeFileSync to redirect debug files to /tmp
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fs.writeFileSync = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, options?: fs.WriteFileOptions) {
-    if (typeof filePath === 'string' && filePath.includes('watch.html')) {
-      // Redirect debug files to /tmp directory
-      const fileName = path.basename(filePath);
-      const tmpPath = path.join('/tmp', fileName);
-      return originalWriteFileSync.call(this, tmpPath, data, options);
+    if (typeof filePath === 'string' && (filePath.includes('watch.html') || filePath.includes('.html'))) {
+      try {
+        const fileName = path.basename(filePath);
+        const tmpPath = path.join('/tmp', fileName);
+        return originalWriteFileSync.call(this, tmpPath, data, options);
+      } catch (error) {
+        // Silently ignore debug file write errors
+        console.warn('Debug file write ignored:', filePath);
+        return;
+      }
     }
     return originalWriteFileSync.call(this, filePath, data, options);
+  };
+  
+  // Override openSync to redirect debug files to /tmp
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fs.openSync = function(path: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode) {
+    if (typeof path === 'string' && (path.includes('watch.html') || path.includes('.html'))) {
+      try {
+        const fileName = path.split('/').pop() || path.split('\\').pop() || 'debug.html';
+        const tmpPath = `/tmp/${fileName}`;
+        return originalOpenSync.call(this, tmpPath, flags, mode);
+      } catch (error) {
+        // Return a dummy file descriptor that won't cause issues
+        console.warn('Debug file open ignored:', path);
+        throw new Error('ENOENT: no such file or directory');
+      }
+    }
+    return originalOpenSync.call(this, path, flags, mode);
   };
 }
 
@@ -103,6 +129,20 @@ export async function POST(request: NextRequest) {
           break; // Success, exit retry loop
         } catch (err) {
           lastError = err;
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          
+          // If it's a filesystem error, try to continue anyway
+          if (errorMessage.includes('EROFS') || errorMessage.includes('read-only file system')) {
+            console.warn('Filesystem error ignored, attempting to continue:', errorMessage);
+            // Try to get basic info without debug files
+            try {
+              videoInfo = await ytdl.getBasicInfo(trimmedUrl, ytdlOptions);
+              if (videoInfo) break;
+            } catch (basicInfoError) {
+              console.warn('Basic info also failed:', basicInfoError);
+            }
+          }
+          
           retries--;
           
           if (retries > 0) {
