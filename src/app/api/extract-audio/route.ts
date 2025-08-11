@@ -1,12 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import ytdl from "@distube/ytdl-core";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
+import fs from 'fs';
+import path from 'path';
 
-// Disable debug mode in production to prevent file system writes
+// Monkey-patch fs.writeFileSync to redirect debug files to /tmp in production
 if (process.env.NODE_ENV === 'production') {
   process.env.YTDL_NO_UPDATE = 'true';
-  // Additional environment variables to prevent file writes
   process.env.YTDL_DEBUG = 'false';
+  
+  const originalWriteFileSync = fs.writeFileSync;
+  const originalWriteFile = fs.writeFile;
+  
+  // Override writeFileSync to redirect debug files to /tmp
+  fs.writeFileSync = function(filePath: any, data: any, options?: any) {
+    if (typeof filePath === 'string' && filePath.includes('watch.html')) {
+      // Redirect debug files to /tmp directory
+      const fileName = path.basename(filePath);
+      const tmpPath = path.join('/tmp', fileName);
+      return originalWriteFileSync.call(this, tmpPath, data, options);
+    }
+    return originalWriteFileSync.call(this, filePath, data, options);
+  };
+  
+  // Override writeFile to redirect debug files to /tmp
+  fs.writeFile = function(filePath: any, data: any, options?: any, callback?: unknown) {
+    if (typeof filePath === 'string' && filePath.includes('watch.html')) {
+      // Redirect debug files to /tmp directory
+      const fileName = path.basename(filePath);
+      const tmpPath = path.join('/tmp', fileName);
+      return originalWriteFile.call(this, tmpPath, data, options, callback);
+    }
+    return originalWriteFile.call(this, filePath, data, options, callback);
+  };
 }
 
 // YouTube URL validation regex
