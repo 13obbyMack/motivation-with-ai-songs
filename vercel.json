@@ -29,7 +29,7 @@
       "memory": 256
     }
   },
-  "regions": ["iad1", "sfo1", "lhr1"],
+
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",

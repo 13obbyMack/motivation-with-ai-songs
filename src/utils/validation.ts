@@ -70,7 +70,7 @@ export function convertBase64ToBuffer(
     }
 
     return { buffer };
-  } catch (error) {
+  } catch {
     return {
       error: `Invalid base64 data${filename ? ` for "${filename}"` : ''}`,
       statusCode: 400,
@@ -91,4 +91,115 @@ export function formatBytes(bytes: number, decimals = 2): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+/**
+ * Validates API keys format and structure
+ */
+export function validateAPIKeys(keys: { openaiKey: string; elevenlabsKey: string }): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  if (!keys.openaiKey || keys.openaiKey.trim().length === 0) {
+    errors.push('OpenAI API key is required');
+  } else if (!keys.openaiKey.startsWith('sk-')) {
+    errors.push('OpenAI API key must start with "sk-"');
+  }
+
+  if (!keys.elevenlabsKey || keys.elevenlabsKey.trim().length === 0) {
+    errors.push('ElevenLabs API key is required');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Sanitizes API key for display (shows only first/last few characters)
+ */
+export function sanitizeAPIKey(key: string): string {
+  if (!key || key.length < 8) return key;
+  return `${key.slice(0, 4)}...${key.slice(-4)}`;
+}
+
+/**
+ * Validates user form data
+ */
+export function validateUserFormData(data: {
+  name: string;
+  characterPrompt: string;
+  selectedVoiceId: string;
+  physicalActivity: string;
+  youtubeUrl: string;
+}): {
+  isValid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+
+  if (!data.name || data.name.trim().length === 0) {
+    errors.push('Name is required');
+  }
+
+  if (!data.characterPrompt || data.characterPrompt.trim().length === 0) {
+    errors.push('Character prompt is required');
+  }
+
+  if (!data.selectedVoiceId || data.selectedVoiceId.trim().length === 0) {
+    errors.push('Voice selection is required');
+  }
+
+  if (!data.physicalActivity || data.physicalActivity.trim().length === 0) {
+    errors.push('Physical activity is required');
+  }
+
+  if (!data.youtubeUrl || data.youtubeUrl.trim().length === 0) {
+    errors.push('YouTube URL is required');
+  } else {
+    // Basic URL validation
+    try {
+      const url = new URL(data.youtubeUrl);
+      if (!url.hostname.includes('youtube.com') && !url.hostname.includes('youtu.be')) {
+        errors.push('Please provide a valid YouTube URL');
+      }
+    } catch {
+      errors.push('Please provide a valid YouTube URL');
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+}
+/**
+ 
+* Validates ElevenLabs API key format
+ */
+export function validateElevenLabsKey(key: string): boolean {
+  return Boolean(key && key.trim().length > 0);
+}
+
+/**
+ * Validates email format
+ */
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+/**
+ * Validates URL format
+ */
+export function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
 }

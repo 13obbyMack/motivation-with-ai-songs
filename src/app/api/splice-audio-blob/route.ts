@@ -4,7 +4,7 @@ import { convertBase64ToBuffer, validateFileSize } from "@/utils/validation";
 import { shouldUseBlob, processLargeFile, BLOB_CONFIG } from "@/utils/blob-storage";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegStatic from "ffmpeg-static";
-import { promises as fs } from "fs";
+import { promises as fs, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
@@ -13,23 +13,20 @@ import { randomUUID } from "crypto";
 if (ffmpegStatic) {
   let ffmpegPath = ffmpegStatic;
   if (ffmpegPath.startsWith("\\ROOT\\")) {
-    const path = require("path");
-    ffmpegPath = path.join(process.cwd(), ffmpegPath.replace("\\ROOT\\", ""));
+    ffmpegPath = join(process.cwd(), ffmpegPath.replace("\\ROOT\\", ""));
   }
 
-  const path = require("path");
-  const resolvedPath = path.resolve(ffmpegPath);
+  const resolvedPath = join(ffmpegPath);
 
   try {
-    const fs = require("fs");
-    if (fs.existsSync(resolvedPath)) {
+    if (existsSync(resolvedPath)) {
       ffmpeg.setFfmpegPath(resolvedPath);
     } else {
       console.warn("FFmpeg binary not found, falling back to system ffmpeg");
       ffmpeg.setFfmpegPath("ffmpeg");
     }
-  } catch (error) {
-    console.error("Error setting ffmpeg path:", error);
+  } catch {
+    console.error("Error setting ffmpeg path");
     ffmpeg.setFfmpegPath("ffmpeg");
   }
 } else {
@@ -72,7 +69,7 @@ async function processAudioSplicing(
       if (spliceMode === "distributed") {
         // Use distributed audio processing (implementation from original route)
         // This is a simplified version - you'd implement the full distributed logic here
-        const command = ffmpeg()
+        ffmpeg()
           .input(originalPath)
           .input(speechPaths[0]!)
           .complexFilter([

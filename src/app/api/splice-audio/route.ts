@@ -3,8 +3,8 @@ import { SpliceAudioRequest, SpliceAudioResponse } from "@/types";
 import { convertBase64ToBuffer, validateTotalPayloadSize } from "@/utils/validation";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegStatic from "ffmpeg-static";
-import { promises as fs } from "fs";
-import { join } from "path";
+import { promises as fs, existsSync } from "fs";
+import { join, resolve } from "path";
 import { tmpdir } from "os";
 import { randomUUID } from "crypto";
 
@@ -14,27 +14,21 @@ if (ffmpegStatic) {
   let ffmpegPath = ffmpegStatic;
   if (ffmpegPath.startsWith("\\ROOT\\")) {
     // Replace \ROOT\ with the actual project root
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const path = require("path");
-    ffmpegPath = path.join(process.cwd(), ffmpegPath.replace("\\ROOT\\", ""));
+    ffmpegPath = join(process.cwd(), ffmpegPath.replace("\\ROOT\\", ""));
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const path = require("path");
-  const resolvedPath = path.resolve(ffmpegPath);
+  const resolvedPath = resolve(ffmpegPath);
 
   // Check if file exists and set the path
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fs = require("fs");
-    if (fs.existsSync(resolvedPath)) {
+    if (existsSync(resolvedPath)) {
       ffmpeg.setFfmpegPath(resolvedPath);
     } else {
       console.warn("FFmpeg binary not found, falling back to system ffmpeg");
       ffmpeg.setFfmpegPath("ffmpeg");
     }
-  } catch (error) {
-    console.error("Error setting ffmpeg path:", error);
+  } catch {
+    console.error("Error setting ffmpeg path");
     ffmpeg.setFfmpegPath("ffmpeg");
   }
 } else {
@@ -42,14 +36,7 @@ if (ffmpegStatic) {
   ffmpeg.setFfmpegPath("ffmpeg");
 }
 
-// Helper function to convert base64 string to Buffer (deprecated - use validation utils)
-function convertToBuffer(audioData: string): Buffer {
-  const result = convertBase64ToBuffer(audioData);
-  if (result.error) {
-    throw new Error(result.error);
-  }
-  return result.buffer!;
-}
+
 
 // Helper function to get audio duration
 function getAudioDuration(filePath: string): Promise<number> {
