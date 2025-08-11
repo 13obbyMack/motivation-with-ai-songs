@@ -220,7 +220,102 @@ Your app includes:
 - Compression enabled
 - Static asset caching
 
-## 🔄 Deployment Workflow
+## 🔄 Deployment Workflow & Preview vs Production Control
+
+### Understanding Vercel Deployments
+
+**Preview Deployments:**
+
+- Safe testing environment
+- Generated for every push to non-production branches
+- Unique URLs for each deployment
+- Perfect for testing before going live
+
+**Production Deployments:**
+
+- Live site that users see
+- Only triggered by pushes to production branch (usually `main` or `master`)
+- Uses your custom domain (if configured)
+
+### Method 1: Branch-Based Control (Recommended)
+
+**Setup Production Branch:**
+
+1. In Vercel Dashboard → Project Settings → Git
+2. Set **Production Branch** to `main` (or `master`)
+3. All other branches automatically deploy to Preview
+
+**Workflow:**
+
+```bash
+# Work on feature branches - these go to Preview
+git checkout -b feature/new-audio-processing
+git push origin feature/new-audio-processing  # → Preview deployment
+
+# Merge to main when ready for Production
+git checkout main
+git merge feature/new-audio-processing
+git push origin main  # → Production deployment
+```
+
+### Method 2: CLI Control
+
+1. **Deploy Preview (any branch):**
+
+   ```bash
+   vercel
+   ```
+
+2. **Deploy Production (force):**
+
+   ```bash
+   vercel --prod
+   ```
+
+3. **Deploy specific branch to Preview:**
+   ```bash
+   git checkout feature-branch
+   vercel
+   ```
+
+### Method 3: Vercel Configuration
+
+Create or update `vercel.json` to control deployments:
+
+```json
+{
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "develop": false
+    }
+  }
+}
+```
+
+### Method 4: GitHub Integration Settings
+
+**In Vercel Dashboard:**
+
+1. Go to Project Settings → Git
+2. Configure **Deploy Hooks**:
+   - **Production Branch:** `main`
+   - **Preview Branches:** All other branches
+   - **Ignored Build Step:** Can skip builds for certain branches
+
+### Method 5: Environment-Based Control
+
+**Different configs per environment:**
+
+```bash
+# Preview environment
+VERCEL_ENV=preview
+
+# Production environment
+VERCEL_ENV=production
+```
+
+### 🎯 Recommended Workflow for Your Project
 
 1. **Development:**
 
@@ -228,23 +323,52 @@ Your app includes:
    npm run dev
    ```
 
-2. **Test Build:**
+2. **Feature Development:**
+
+   ```bash
+   git checkout -b feature/audio-improvements
+   # Make changes
+   git push origin feature/audio-improvements  # → Preview
+   ```
+
+3. **Test Build Locally:**
 
    ```bash
    npm run build
    npm start
    ```
 
-3. **Deploy Preview:**
+4. **Deploy to Preview (test):**
 
    ```bash
-   vercel
+   vercel  # Always goes to Preview unless --prod
    ```
 
-4. **Deploy Production:**
+5. **Ready for Production:**
    ```bash
-   vercel --prod
+   git checkout main
+   git merge feature/audio-improvements
+   git push origin main  # → Production (if main is production branch)
    ```
+
+### 🔧 Vercel Dashboard Settings
+
+**To ensure Git pushes go to Preview:**
+
+1. **Project Settings → Git:**
+
+   - Production Branch: `main`
+   - Auto-deploy: Enabled for all branches
+   - Preview branches: All branches except production
+
+2. **Project Settings → Functions:**
+
+   - Preview deployments use same function config
+   - Can have different environment variables
+
+3. **Project Settings → Environment Variables:**
+   - Set different values for Preview vs Production
+   - Use `VERCEL_ENV` to detect environment in code
 
 ## 📋 Pre-Deployment Checklist
 
@@ -259,9 +383,39 @@ Your app includes:
 - [x] Client-side validation utilities
 - [x] Blob storage implementation for large files (up to 100MB)
 - [x] Smart routing based on file size
-- [ ] API keys added to Vercel dashboard
+- [ ] Production branch configured in Vercel dashboard (`main`)
+- [ ] Preview deployment strategy chosen
+- [ ] API keys added to Vercel dashboard (both Preview & Production)
 - [ ] Domain configured (if custom domain needed)
 - [ ] Test audio processing with small files first
+
+## 🚦 Quick Setup for Preview-First Workflow
+
+1. **Set Production Branch in Vercel:**
+
+   - Dashboard → Project → Settings → Git
+   - Set Production Branch to `main`
+
+2. **Create Development Branch:**
+
+   ```bash
+   git checkout -b develop
+   git push origin develop  # This will deploy to Preview
+   ```
+
+3. **Work on Features:**
+
+   ```bash
+   git checkout -b feature/new-feature
+   git push origin feature/new-feature  # Preview deployment
+   ```
+
+4. **Deploy to Production when ready:**
+   ```bash
+   git checkout main
+   git merge develop
+   git push origin main  # Production deployment
+   ```
 
 ## 🎯 Next Steps
 

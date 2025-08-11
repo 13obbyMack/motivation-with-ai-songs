@@ -3,6 +3,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.kiro/*
+.github/workflows
+VERCEL_DEPLOYMENT_GUIDE.md
+.vercel/*
 
 # Testing
 coverage/
@@ -29,6 +33,7 @@ Thumbs.db
 .env.production.local
 
 # Documentation (keeping only README)
+/docs
 *.md
 !README.md
 

@@ -21,6 +21,9 @@
 /build
 
 # misc
+.kiro/*
+.github/workflows
+VERCEL_DEPLOYMENT_GUIDE.md
 /docs
 .DS_Store
 *.pem
