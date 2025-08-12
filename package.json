@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=\"--no-deprecation\" next dev --turbopack",
     "dev:verbose": "next dev --turbopack",
-    "build": "cross-env NODE_OPTIONS=\"--no-deprecation\" next build",
-    "start": "cross-env NODE_OPTIONS=\"--no-deprecation\" next start",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "type-check": "tsc --noEmit",

@@ -31,7 +31,7 @@
   },
 
   "framework": "nextjs",
-  "buildCommand": "npm ci && npm run build",
+  "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "devCommand": "npm run dev:verbose",
@@ -86,7 +86,8 @@
   ],
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1",
-    "YOUTUBE_DL_SKIP_DOWNLOAD": "false"
+    "YOUTUBE_DL_SKIP_DOWNLOAD": "false",
+    "NODE_OPTIONS": "--no-deprecation"
   },
   "trailingSlash": false,
   "cleanUrls": true
