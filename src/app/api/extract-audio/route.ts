@@ -37,7 +37,7 @@ if (process.env.NODE_ENV === 'production') {
   };
   
   // Override writeFile (async) to redirect debug files to /tmp
-  fs.writeFile = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, ...args: any[]) {
+  fs.writeFile = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, ...args: unknown[]) {
     if (typeof filePath === 'string' && isDebugFile(filePath)) {
       try {
         const fileName = path.basename(filePath);
