@@ -1,16 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
-import ytdl from "@distube/ytdl-core";
+import youtubedl from "youtube-dl-exec";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
-
-// Set environment variables to prevent debug file creation
-if (process.env.NODE_ENV === "production") {
-  process.env.YTDL_NO_UPDATE = "true";
-  process.env.YTDL_DEBUG = "false";
-}
 
 // YouTube URL validation regex
 const YOUTUBE_URL_REGEX =
   /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(\S*)?$/;
+
+// Type definitions for youtube-dl-exec response
+interface YoutubeDLFormat {
+  format_id?: string;
+  url?: string;
+  ext?: string;
+  acodec?: string;
+  vcodec?: string;
+  abr?: number;
+}
+
+interface YoutubeDLInfo {
+  title?: string;
+  duration?: number;
+  url?: string;
+  formats?: YoutubeDLFormat[];
+}
+
+// Function to get video info and audio URL using youtube-dl-exec
+async function getVideoInfo(url: string) {
+  try {
+    const info: YoutubeDLInfo = (await youtubedl(url, {
+      dumpSingleJson: true,
+      noCheckCertificates: true,
+      noWarnings: true,
+      preferFreeFormats: true,
+      format: "bestaudio/best",
+      addHeader: [
+        "referer:youtube.com",
+        "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      ],
+    })) as YoutubeDLInfo;
+
+    // Find the best audio format
+    let audioUrl = info.url;
+    if (!audioUrl && info.formats) {
+      const audioFormat = info.formats.find(
+        (f: YoutubeDLFormat) => f.acodec && f.acodec !== "none" && f.url
+      );
+      audioUrl = audioFormat?.url;
+    }
+
+    return {
+      title: info.title || "Unknown Title",
+      duration: info.duration || 0,
+      audioUrl: audioUrl || undefined,
+    };
+  } catch (error) {
+    console.error("youtube-dl-exec failed:", error);
+    throw error;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,105 +91,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if URL is valid and accessible
+    // Get video info using youtube-dl-exec
     let videoInfo;
     try {
-      // Configure ytdl with options to avoid bot detection
-      const ytdlOptions = {
-        requestOptions: {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
-            DNT: "1",
-            Connection: "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-          },
-        },
-      };
-
-      const isValid = await ytdl.validateURL(trimmedUrl);
-      if (!isValid) {
-        return NextResponse.json<ExtractAudioResponse>(
-          {
-            audioData: "",
-            duration: 0,
-            title: "",
-            success: false,
-            error: "Invalid or inaccessible YouTube URL",
-          },
-          { status: 400 }
-        );
-      }
-
-      // Retry logic for bot detection and filesystem issues
-      let retries = 3;
-      let lastError;
-
-      while (retries > 0) {
-        try {
-          // Wrap ytdl calls in try-catch to handle filesystem errors
-          try {
-            videoInfo = await ytdl.getInfo(trimmedUrl, ytdlOptions);
-            break; // Success, exit retry loop
-          } catch (fsError) {
-            const fsErrorMessage =
-              fsError instanceof Error ? fsError.message : String(fsError);
-
-            // If it's a filesystem error, try alternative approach
-            if (
-              fsErrorMessage.includes("EROFS") ||
-              fsErrorMessage.includes("read-only file system")
-            ) {
-              console.warn(
-                "Filesystem error detected, trying alternative approach:",
-                fsErrorMessage
-              );
-
-              // Try to get basic info which might not trigger debug file creation
-              try {
-                videoInfo = await ytdl.getBasicInfo(trimmedUrl, ytdlOptions);
-                if (videoInfo && videoInfo.videoDetails) {
-                  console.log(
-                    "Successfully got basic info despite filesystem error"
-                  );
-                  break;
-                }
-              } catch (basicInfoError) {
-                console.warn("Basic info also failed:", basicInfoError);
-                throw fsError; // Re-throw original error
-              }
-            } else {
-              throw fsError; // Re-throw non-filesystem errors
-            }
-          }
-        } catch (err) {
-          lastError = err;
-          retries--;
-
-          if (retries > 0) {
-            console.log(`Retrying... ${retries} attempts remaining`);
-            // Wait before retrying (exponential backoff)
-            await new Promise((resolve) =>
-              setTimeout(resolve, (4 - retries) * 1000)
-            );
-          }
-        }
-      }
-
-      if (!videoInfo) {
-        throw lastError;
-      }
+      videoInfo = await getVideoInfo(trimmedUrl);
     } catch (error) {
-      console.error("Error validating YouTube URL:", error);
+      console.error("Error getting video info:", error);
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
       // Provide more specific error messages
-      if (errorMessage.includes("Sign in to confirm")) {
+      if (
+        errorMessage.includes("Sign in to confirm") ||
+        errorMessage.includes("not available")
+      ) {
         return NextResponse.json<ExtractAudioResponse>(
           {
             audioData: "",
@@ -170,9 +131,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract video metadata
-    const title = videoInfo.videoDetails.title;
-    const duration = parseInt(videoInfo.videoDetails.lengthSeconds);
+    const { title, duration, audioUrl } = videoInfo;
 
     // Check duration limits (max 10 minutes for reasonable processing)
     if (duration > 600) {
@@ -189,9 +148,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get audio stream with highest quality
-    const audioFormats = ytdl.filterFormats(videoInfo.formats, "audioonly");
-    if (audioFormats.length === 0) {
+    // Check if we have an audio URL
+    if (!audioUrl) {
       return NextResponse.json<ExtractAudioResponse>(
         {
           audioData: "",
@@ -204,144 +162,79 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Select best audio format (prefer 192kbps or higher)
-    const bestAudioFormat = audioFormats.reduce((best, current) => {
-      const currentBitrate = current.audioBitrate || 0;
-      const bestBitrate = best.audioBitrate || 0;
-      return currentBitrate > bestBitrate ? current : best;
-    });
-
-    // Extract audio data
+    // Download audio data
     try {
-      const audioStream = ytdl(trimmedUrl, {
-        format: bestAudioFormat,
-        quality: "highestaudio",
-        requestOptions: {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            Accept:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate",
-            DNT: "1",
-            Connection: "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-          },
+      console.log("Downloading audio from:", audioUrl);
+
+      const response = await fetch(audioUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Referer: "https://www.youtube.com/",
         },
       });
 
-      // Collect audio data chunks
-      const chunks: Buffer[] = [];
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch audio: ${response.status} ${response.statusText}`
+        );
+      }
 
-      return new Promise<NextResponse>((resolve) => {
-        audioStream.on("data", (chunk: Buffer) => {
-          chunks.push(chunk);
-
-          // Check if we're approaching size limits during streaming
-          const currentSize = chunks.reduce(
-            (total, chunk) => total + chunk.length,
-            0
+      // Check content length to avoid downloading huge files
+      const contentLength = response.headers.get("content-length");
+      if (contentLength) {
+        const sizeInMB = parseInt(contentLength) / (1024 * 1024);
+        if (sizeInMB > 10) {
+          throw new Error(
+            `Audio file too large (${sizeInMB.toFixed(
+              2
+            )}MB). Please use shorter videos.`
           );
-          const maxSize = 10 * 1024 * 1024; // 10MB limit
+        }
+      }
 
-          if (currentSize > maxSize) {
-            audioStream.destroy();
-            resolve(
-              NextResponse.json<ExtractAudioResponse>(
-                {
-                  audioData: "",
-                  duration: 0,
-                  title: title,
-                  success: false,
-                  error: `Audio file too large (${(
-                    currentSize /
-                    1024 /
-                    1024
-                  ).toFixed(2)}MB). Please use shorter videos.`,
-                },
-                { status: 413 }
-              )
-            );
-            return;
-          }
-        });
+      const audioBuffer = await response.arrayBuffer();
+      const audioBase64 = Buffer.from(audioBuffer).toString("base64");
 
-        audioStream.on("end", () => {
-          try {
-            // Combine all chunks into a single buffer
-            const audioBuffer = Buffer.concat(chunks);
+      console.log(
+        `Successfully downloaded audio: ${(
+          audioBuffer.byteLength /
+          1024 /
+          1024
+        ).toFixed(2)}MB`
+      );
 
-            // Convert to base64 for consistent API response format
-            const audioBase64 = audioBuffer.toString("base64");
-
-            const response: ExtractAudioResponse = {
-              audioData: audioBase64,
-              duration: duration,
-              title: title,
-              success: true,
-            };
-
-            resolve(NextResponse.json(response));
-          } catch (error) {
-            console.error("Error processing audio data:", error);
-            resolve(
-              NextResponse.json<ExtractAudioResponse>(
-                {
-                  audioData: "",
-                  duration: 0,
-                  title: title,
-                  success: false,
-                  error: "Failed to process audio data",
-                },
-                { status: 500 }
-              )
-            );
-          }
-        });
-
-        audioStream.on("error", (error) => {
-          console.error("Error extracting audio:", error);
-          resolve(
-            NextResponse.json<ExtractAudioResponse>(
-              {
-                audioData: "",
-                duration: 0,
-                title: title,
-                success: false,
-                error: "Failed to extract audio from YouTube video",
-              },
-              { status: 500 }
-            )
-          );
-        });
-
-        // Set timeout for long-running extractions
-        setTimeout(() => {
-          audioStream.destroy();
-          resolve(
-            NextResponse.json<ExtractAudioResponse>(
-              {
-                audioData: "",
-                duration: 0,
-                title: title,
-                success: false,
-                error: "Audio extraction timed out. Please try again.",
-              },
-              { status: 408 }
-            )
-          );
-        }, 60000); // 60 second timeout
+      return NextResponse.json<ExtractAudioResponse>({
+        audioData: audioBase64,
+        duration: duration,
+        title: title,
+        success: true,
       });
     } catch (error) {
-      console.error("Error creating audio stream:", error);
+      console.error("Error downloading audio:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes("too large")) {
+        return NextResponse.json<ExtractAudioResponse>(
+          {
+            audioData: "",
+            duration: 0,
+            title: title,
+            success: false,
+            error: errorMessage,
+          },
+          { status: 413 }
+        );
+      }
+
       return NextResponse.json<ExtractAudioResponse>(
         {
           audioData: "",
           duration: 0,
           title: title,
           success: false,
-          error: "Failed to create audio stream",
+          error: "Failed to download audio from YouTube video",
         },
         { status: 500 }
       );
