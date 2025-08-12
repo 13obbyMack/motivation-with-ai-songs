@@ -11,11 +11,18 @@ if (process.env.NODE_ENV === 'production') {
   
   // Store original methods
   const originalWriteFileSync = fs.writeFileSync;
+  const originalWriteFile = fs.writeFile;
   const originalOpenSync = fs.openSync;
+  const originalOpen = fs.open;
+  
+  // Helper function to check if path is a debug file
+  const isDebugFile = (filePath: string) => {
+    return filePath.includes('watch.html') || filePath.includes('.html') || filePath.match(/\d+-watch\.html$/);
+  };
   
   // Override writeFileSync to redirect debug files to /tmp
   fs.writeFileSync = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, options?: fs.WriteFileOptions) {
-    if (typeof filePath === 'string' && (filePath.includes('watch.html') || filePath.includes('.html'))) {
+    if (typeof filePath === 'string' && isDebugFile(filePath)) {
       try {
         const fileName = path.basename(filePath);
         const tmpPath = path.join('/tmp', fileName);
@@ -29,20 +36,60 @@ if (process.env.NODE_ENV === 'production') {
     return originalWriteFileSync.call(this, filePath, data, options);
   };
   
+  // Override writeFile (async) to redirect debug files to /tmp
+  fs.writeFile = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, ...args: any[]) {
+    if (typeof filePath === 'string' && isDebugFile(filePath)) {
+      try {
+        const fileName = path.basename(filePath);
+        const tmpPath = path.join('/tmp', fileName);
+        return originalWriteFile.call(this, tmpPath, data, ...args);
+      } catch {
+        // Silently ignore debug file write errors
+        console.warn('Debug file write ignored:', filePath);
+        const callback = args[args.length - 1];
+        if (typeof callback === 'function') {
+          callback(null);
+        }
+        return;
+      }
+    }
+    return originalWriteFile.call(this, filePath, data, ...args);
+  };
+  
   // Override openSync to redirect debug files to /tmp
   fs.openSync = function(filePath: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode | null) {
-    if (typeof filePath === 'string' && (filePath.includes('watch.html') || filePath.includes('.html'))) {
+    if (typeof filePath === 'string' && isDebugFile(filePath)) {
       try {
-        const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || 'debug.html';
-        const tmpPath = `/tmp/${fileName}`;
+        const fileName = path.basename(filePath);
+        const tmpPath = path.join('/tmp', fileName);
         return originalOpenSync.call(this, tmpPath, flags, mode);
       } catch {
-        // Return a dummy file descriptor that won't cause issues
+        // Silently ignore debug file open errors
         console.warn('Debug file open ignored:', filePath);
         throw new Error('ENOENT: no such file or directory');
       }
     }
     return originalOpenSync.call(this, filePath, flags, mode);
+  };
+  
+  // Override open (async) to redirect debug files to /tmp
+  fs.open = function(filePath: fs.PathLike, flags: fs.OpenMode, ...args: unknown[]) {
+    if (typeof filePath === 'string' && isDebugFile(filePath)) {
+      try {
+        const fileName = path.basename(filePath);
+        const tmpPath = path.join('/tmp', fileName);
+        return originalOpen.call(this, tmpPath, flags, ...args);
+      } catch {
+        // Silently ignore debug file open errors
+        console.warn('Debug file open ignored:', filePath);
+        const callback = args[args.length - 1];
+        if (typeof callback === 'function') {
+          callback(new Error('ENOENT: no such file or directory'));
+        }
+        return;
+      }
+    }
+    return originalOpen.call(this, filePath, flags, ...args);
   };
 }
 
