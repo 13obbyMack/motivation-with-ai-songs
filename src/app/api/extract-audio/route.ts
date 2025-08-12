@@ -1,96 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import ytdl from "@distube/ytdl-core";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
-import fs from 'fs';
-import path from 'path';
 
-// Comprehensive filesystem monkey-patch for production
-if (process.env.NODE_ENV === 'production') {
-  process.env.YTDL_NO_UPDATE = 'true';
-  process.env.YTDL_DEBUG = 'false';
-  
-  // Store original methods
-  const originalWriteFileSync = fs.writeFileSync;
-  const originalWriteFile = fs.writeFile;
-  const originalOpenSync = fs.openSync;
-  const originalOpen = fs.open;
-  
-  // Helper function to check if path is a debug file
-  const isDebugFile = (filePath: string) => {
-    return filePath.includes('watch.html') || filePath.includes('.html') || filePath.match(/\d+-watch\.html$/);
-  };
-  
-  // Override writeFileSync to redirect debug files to /tmp
-  fs.writeFileSync = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, options?: fs.WriteFileOptions) {
-    if (typeof filePath === 'string' && isDebugFile(filePath)) {
-      try {
-        const fileName = path.basename(filePath);
-        const tmpPath = path.join('/tmp', fileName);
-        return originalWriteFileSync.call(this, tmpPath, data, options);
-      } catch {
-        // Silently ignore debug file write errors
-        console.warn('Debug file write ignored:', filePath);
-        return;
-      }
-    }
-    return originalWriteFileSync.call(this, filePath, data, options);
-  };
-  
-  // Override writeFile (async) to redirect debug files to /tmp
-  fs.writeFile = function(filePath: fs.PathOrFileDescriptor, data: string | NodeJS.ArrayBufferView, ...args: unknown[]) {
-    if (typeof filePath === 'string' && isDebugFile(filePath)) {
-      try {
-        const fileName = path.basename(filePath);
-        const tmpPath = path.join('/tmp', fileName);
-        return originalWriteFile.call(this, tmpPath, data, ...args);
-      } catch {
-        // Silently ignore debug file write errors
-        console.warn('Debug file write ignored:', filePath);
-        const callback = args[args.length - 1];
-        if (typeof callback === 'function') {
-          callback(null);
-        }
-        return;
-      }
-    }
-    return originalWriteFile.call(this, filePath, data, ...args);
-  };
-  
-  // Override openSync to redirect debug files to /tmp
-  fs.openSync = function(filePath: fs.PathLike, flags: fs.OpenMode, mode?: fs.Mode | null) {
-    if (typeof filePath === 'string' && isDebugFile(filePath)) {
-      try {
-        const fileName = path.basename(filePath);
-        const tmpPath = path.join('/tmp', fileName);
-        return originalOpenSync.call(this, tmpPath, flags, mode);
-      } catch {
-        // Silently ignore debug file open errors
-        console.warn('Debug file open ignored:', filePath);
-        throw new Error('ENOENT: no such file or directory');
-      }
-    }
-    return originalOpenSync.call(this, filePath, flags, mode);
-  };
-  
-  // Override open (async) to redirect debug files to /tmp
-  fs.open = function(filePath: fs.PathLike, flags: fs.OpenMode, ...args: unknown[]) {
-    if (typeof filePath === 'string' && isDebugFile(filePath)) {
-      try {
-        const fileName = path.basename(filePath);
-        const tmpPath = path.join('/tmp', fileName);
-        return originalOpen.call(this, tmpPath, flags, ...args);
-      } catch {
-        // Silently ignore debug file open errors
-        console.warn('Debug file open ignored:', filePath);
-        const callback = args[args.length - 1];
-        if (typeof callback === 'function') {
-          callback(new Error('ENOENT: no such file or directory'));
-        }
-        return;
-      }
-    }
-    return originalOpen.call(this, filePath, flags, ...args);
-  };
+// Set environment variables to prevent debug file creation
+if (process.env.NODE_ENV === "production") {
+  process.env.YTDL_NO_UPDATE = "true";
+  process.env.YTDL_DEBUG = "false";
 }
 
 // YouTube URL validation regex
@@ -137,15 +52,17 @@ export async function POST(request: NextRequest) {
       const ytdlOptions = {
         requestOptions: {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-          }
-        }
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            DNT: "1",
+            Connection: "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+          },
+        },
       };
 
       const isValid = await ytdl.validateURL(trimmedUrl);
@@ -162,60 +79,84 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Retry logic for bot detection issues
+      // Retry logic for bot detection and filesystem issues
       let retries = 3;
       let lastError;
-      
+
       while (retries > 0) {
         try {
-          videoInfo = await ytdl.getInfo(trimmedUrl, ytdlOptions);
-          break; // Success, exit retry loop
-        } catch (err) {
-          lastError = err;
-          const errorMessage = err instanceof Error ? err.message : String(err);
-          
-          // If it's a filesystem error, try to continue anyway
-          if (errorMessage.includes('EROFS') || errorMessage.includes('read-only file system')) {
-            console.warn('Filesystem error ignored, attempting to continue:', errorMessage);
-            // Try to get basic info without debug files
-            try {
-              videoInfo = await ytdl.getBasicInfo(trimmedUrl, ytdlOptions);
-              if (videoInfo) break;
-            } catch (basicInfoError) {
-              console.warn('Basic info also failed:', basicInfoError);
+          // Wrap ytdl calls in try-catch to handle filesystem errors
+          try {
+            videoInfo = await ytdl.getInfo(trimmedUrl, ytdlOptions);
+            break; // Success, exit retry loop
+          } catch (fsError) {
+            const fsErrorMessage =
+              fsError instanceof Error ? fsError.message : String(fsError);
+
+            // If it's a filesystem error, try alternative approach
+            if (
+              fsErrorMessage.includes("EROFS") ||
+              fsErrorMessage.includes("read-only file system")
+            ) {
+              console.warn(
+                "Filesystem error detected, trying alternative approach:",
+                fsErrorMessage
+              );
+
+              // Try to get basic info which might not trigger debug file creation
+              try {
+                videoInfo = await ytdl.getBasicInfo(trimmedUrl, ytdlOptions);
+                if (videoInfo && videoInfo.videoDetails) {
+                  console.log(
+                    "Successfully got basic info despite filesystem error"
+                  );
+                  break;
+                }
+              } catch (basicInfoError) {
+                console.warn("Basic info also failed:", basicInfoError);
+                throw fsError; // Re-throw original error
+              }
+            } else {
+              throw fsError; // Re-throw non-filesystem errors
             }
           }
-          
+        } catch (err) {
+          lastError = err;
           retries--;
-          
+
           if (retries > 0) {
+            console.log(`Retrying... ${retries} attempts remaining`);
             // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, (4 - retries) * 1000));
+            await new Promise((resolve) =>
+              setTimeout(resolve, (4 - retries) * 1000)
+            );
           }
         }
       }
-      
+
       if (!videoInfo) {
         throw lastError;
       }
     } catch (error) {
       console.error("Error validating YouTube URL:", error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
       // Provide more specific error messages
-      if (errorMessage.includes('Sign in to confirm')) {
+      if (errorMessage.includes("Sign in to confirm")) {
         return NextResponse.json<ExtractAudioResponse>(
           {
             audioData: "",
             duration: 0,
             title: "",
             success: false,
-            error: "YouTube is blocking access to this video. Please try again in a few minutes or use a different video.",
+            error:
+              "YouTube is blocking access to this video. Please try again in a few minutes or use a different video.",
           },
           { status: 429 }
         );
       }
-      
+
       return NextResponse.json<ExtractAudioResponse>(
         {
           audioData: "",
@@ -277,15 +218,17 @@ export async function POST(request: NextRequest) {
         quality: "highestaudio",
         requestOptions: {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'DNT': '1',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
-          }
-        }
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            Accept:
+              "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate",
+            DNT: "1",
+            Connection: "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+          },
+        },
       });
 
       // Collect audio data chunks
@@ -294,11 +237,14 @@ export async function POST(request: NextRequest) {
       return new Promise<NextResponse>((resolve) => {
         audioStream.on("data", (chunk: Buffer) => {
           chunks.push(chunk);
-          
+
           // Check if we're approaching size limits during streaming
-          const currentSize = chunks.reduce((total, chunk) => total + chunk.length, 0);
+          const currentSize = chunks.reduce(
+            (total, chunk) => total + chunk.length,
+            0
+          );
           const maxSize = 10 * 1024 * 1024; // 10MB limit
-          
+
           if (currentSize > maxSize) {
             audioStream.destroy();
             resolve(
@@ -308,7 +254,11 @@ export async function POST(request: NextRequest) {
                   duration: 0,
                   title: title,
                   success: false,
-                  error: `Audio file too large (${(currentSize / 1024 / 1024).toFixed(2)}MB). Please use shorter videos.`,
+                  error: `Audio file too large (${(
+                    currentSize /
+                    1024 /
+                    1024
+                  ).toFixed(2)}MB). Please use shorter videos.`,
                 },
                 { status: 413 }
               )
