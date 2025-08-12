@@ -16,6 +16,7 @@
     "setup:blob": "node scripts/setup-blob-storage.js",
     "setup:blob:enable": "node scripts/setup-blob-storage.js --enable",
     "setup:blob:status": "node scripts/setup-blob-storage.js --status"
+
   },
   "dependencies": {
     "@types/fluent-ffmpeg": "^2.1.27",

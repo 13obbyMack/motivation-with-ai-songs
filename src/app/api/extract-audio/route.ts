@@ -26,17 +26,46 @@ interface YoutubeDLInfo {
 // Function to get video info and audio URL using youtube-dl-exec
 async function getVideoInfo(url: string) {
   try {
-    const info: YoutubeDLInfo = (await youtubedl(url, {
-      dumpSingleJson: true,
-      noCheckCertificates: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-      format: "bestaudio/best",
-      addHeader: [
-        "referer:youtube.com",
-        "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      ],
-    })) as YoutubeDLInfo;
+    // First attempt with default binary
+    let info: YoutubeDLInfo;
+
+    try {
+      info = (await youtubedl(url, {
+        dumpSingleJson: true,
+        noCheckCertificates: true,
+        noWarnings: true,
+        preferFreeFormats: true,
+        format: "bestaudio/best",
+        addHeader: [
+          "referer:youtube.com",
+          "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ],
+      })) as YoutubeDLInfo;
+    } catch (binaryError) {
+      console.warn(
+        "Default binary failed, trying alternative approaches:",
+        binaryError
+      );
+
+      // Try with different format options that might work better in serverless
+      try {
+        info = (await youtubedl(url, {
+          dumpSingleJson: true,
+          noCheckCertificates: true,
+          noWarnings: true,
+          preferFreeFormats: true,
+          format: "worst",
+          addHeader: [
+            "referer:youtube.com",
+            "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          ],
+        })) as YoutubeDLInfo;
+        console.log("Successfully used fallback format options");
+      } catch (fallbackError) {
+        console.error("All youtube-dl-exec attempts failed:", fallbackError);
+        throw binaryError; // Throw original error
+      }
+    }
 
     // Find the best audio format
     let audioUrl = info.url;
@@ -115,6 +144,21 @@ export async function POST(request: NextRequest) {
               "YouTube is blocking access to this video. Please try again in a few minutes or use a different video.",
           },
           { status: 429 }
+        );
+      }
+
+      // Check if it's a binary installation issue
+      if (errorMessage.includes("ENOENT") || errorMessage.includes("spawn")) {
+        return NextResponse.json<ExtractAudioResponse>(
+          {
+            audioData: "",
+            duration: 0,
+            title: "",
+            success: false,
+            error:
+              "YouTube extraction service is temporarily unavailable. Please try again in a few minutes.",
+          },
+          { status: 503 }
         );
       }
 
