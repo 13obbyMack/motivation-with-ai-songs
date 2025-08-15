@@ -19,7 +19,12 @@ coverage/
 **/*.test.tsx
 **/*.spec.ts
 **/*.spec.tsx
-/scripts
+
+# Keep scripts for build process
+# /scripts
+
+# Ensure binary is included
+!src/app/api/bin/
 
 # IDE and editor files
 /.vscode/

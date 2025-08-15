@@ -27,29 +27,12 @@ interface YoutubeDLInfo {
 
 // Function to get the youtube-dl-exec instance with correct binary path
 function getYoutubeDlInstance() {
-  // Determine the correct binary name for the platform
-  const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
-  const binaryPath = path.resolve(
-    process.cwd(),
-    "src",
-    "app",
-    "api",
-    "bin",
-    binaryName
-  );
-
   console.log("Platform:", process.platform);
-  console.log("Checking for binary at:", binaryPath);
   console.log("Current working directory:", process.cwd());
 
-  // Check if the binary exists and if we're not on Windows with spaces in path
+  // Check if we're not on Windows with spaces in path (for local testing)
   const hasSpacesInPath = process.cwd().includes(' ');
   
-  if (fs.existsSync(binaryPath) && !(process.platform === 'win32' && hasSpacesInPath)) {
-    console.log("✅ Found bundled yt-dlp binary, creating custom instance");
-    return create(binaryPath);
-  }
-
   if (process.platform === 'win32' && hasSpacesInPath) {
     console.log("⚠️  Windows path contains spaces, trying system yt-dlp for local testing");
     try {
@@ -57,11 +40,35 @@ function getYoutubeDlInstance() {
       return create('yt-dlp');
     } catch (error) {
       console.log("⚠️  System yt-dlp not available, using default instance");
+      return youtubedl;
     }
-  } else {
-    console.log("⚠️  Bundled binary not found, using default instance");
   }
-  
+
+  // For production (Linux/Vercel), try different binary options
+  const binaryOptions = [
+    'yt-dlp-standalone', // Standalone binary that doesn't need Python
+    'yt-dlp'            // Regular binary (needs Python)
+  ];
+
+  for (const binaryName of binaryOptions) {
+    const binaryPath = path.resolve(
+      process.cwd(),
+      "src",
+      "app",
+      "api",
+      "bin",
+      binaryName
+    );
+
+    console.log("Checking for binary at:", binaryPath);
+    
+    if (fs.existsSync(binaryPath)) {
+      console.log(`✅ Found ${binaryName} binary, creating custom instance`);
+      return create(binaryPath);
+    }
+  }
+
+  console.log("⚠️  No bundled binary found, using default instance");
   // Fallback to default instance
   return youtubedl;
 }
