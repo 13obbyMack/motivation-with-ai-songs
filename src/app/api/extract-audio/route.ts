@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import youtubedl from "youtube-dl-exec";
+import youtubedl, { create } from "youtube-dl-exec";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
+import path from "path";
+import fs from "fs";
 
 // YouTube URL validation regex
 const YOUTUBE_URL_REGEX =
@@ -23,14 +25,58 @@ interface YoutubeDLInfo {
   formats?: YoutubeDLFormat[];
 }
 
+// Function to get the youtube-dl-exec instance with correct binary path
+function getYoutubeDlInstance() {
+  // Determine the correct binary name for the platform
+  const binaryName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+  const binaryPath = path.resolve(
+    process.cwd(),
+    "src",
+    "app",
+    "api",
+    "bin",
+    binaryName
+  );
+
+  console.log("Platform:", process.platform);
+  console.log("Checking for binary at:", binaryPath);
+  console.log("Current working directory:", process.cwd());
+
+  // Check if the binary exists and if we're not on Windows with spaces in path
+  const hasSpacesInPath = process.cwd().includes(' ');
+  
+  if (fs.existsSync(binaryPath) && !(process.platform === 'win32' && hasSpacesInPath)) {
+    console.log("✅ Found bundled yt-dlp binary, creating custom instance");
+    return create(binaryPath);
+  }
+
+  if (process.platform === 'win32' && hasSpacesInPath) {
+    console.log("⚠️  Windows path contains spaces, trying system yt-dlp for local testing");
+    try {
+      // Try to use system yt-dlp on Windows
+      return create('yt-dlp');
+    } catch (error) {
+      console.log("⚠️  System yt-dlp not available, using default instance");
+    }
+  } else {
+    console.log("⚠️  Bundled binary not found, using default instance");
+  }
+  
+  // Fallback to default instance
+  return youtubedl;
+}
+
 // Function to get video info and audio URL using youtube-dl-exec
 async function getVideoInfo(url: string) {
   try {
-    // First attempt with default binary
+    // Get the youtube-dl instance with correct binary
+    const ytdl = getYoutubeDlInstance();
+
+    // First attempt with best audio format
     let info: YoutubeDLInfo;
 
     try {
-      info = (await youtubedl(url, {
+      info = (await ytdl(url, {
         dumpSingleJson: true,
         noCheckCertificates: true,
         noWarnings: true,
@@ -49,7 +95,7 @@ async function getVideoInfo(url: string) {
 
       // Try with different format options that might work better in serverless
       try {
-        info = (await youtubedl(url, {
+        info = (await ytdl(url, {
           dumpSingleJson: true,
           noCheckCertificates: true,
           noWarnings: true,

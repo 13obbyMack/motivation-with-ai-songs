@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=\"--no-deprecation\" next dev --turbopack",
     "dev:verbose": "next dev --turbopack",
-    "build": "next build",
+    "build": "node scripts/prepare-binary.js && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -16,7 +16,6 @@
     "setup:blob": "node scripts/setup-blob-storage.js",
     "setup:blob:enable": "node scripts/setup-blob-storage.js --enable",
     "setup:blob:status": "node scripts/setup-blob-storage.js --status"
-
   },
   "dependencies": {
     "@types/fluent-ffmpeg": "^2.1.27",
@@ -27,7 +26,7 @@
     "openai": "^5.10.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "youtube-dl-exec": "^3.0.23"
+    "youtube-dl-exec": "^3.0.24"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -43,6 +42,7 @@
     "eslint-config-next": "15.4.2",
     "jest": "^30.0.5",
     "jest-environment-jsdom": "^30.0.5",
+    "node-fetch": "^2.7.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

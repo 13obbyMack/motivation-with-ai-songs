@@ -86,9 +86,12 @@
   ],
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1",
-    "YOUTUBE_DL_SKIP_DOWNLOAD": "false",
+    "YOUTUBE_DL_SKIP_DOWNLOAD": "true",
     "NODE_OPTIONS": "--no-deprecation"
   },
+  "includeFiles": [
+    "src/app/api/bin/yt-dlp"
+  ],
   "trailingSlash": false,
   "cleanUrls": true
 }
