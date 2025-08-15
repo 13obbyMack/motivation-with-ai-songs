@@ -87,8 +87,7 @@
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1",
     "YOUTUBE_DL_SKIP_DOWNLOAD": "true",
-    "NODE_OPTIONS": "--no-deprecation",
-    "PATH": "/usr/local/bin:/usr/bin:/bin:/opt/python/bin"
+    "NODE_OPTIONS": "--no-deprecation"
   },
   "trailingSlash": false,
   "cleanUrls": true

@@ -31,13 +31,15 @@ function getYoutubeDlInstance() {
   console.log("Current working directory:", process.cwd());
 
   // Check if we're not on Windows with spaces in path (for local testing)
-  const hasSpacesInPath = process.cwd().includes(' ');
-  
-  if (process.platform === 'win32' && hasSpacesInPath) {
-    console.log("⚠️  Windows path contains spaces, trying system yt-dlp for local testing");
+  const hasSpacesInPath = process.cwd().includes(" ");
+
+  if (process.platform === "win32" && hasSpacesInPath) {
+    console.log(
+      "⚠️  Windows path contains spaces, trying system yt-dlp for local testing"
+    );
     try {
       // Try to use system yt-dlp on Windows
-      return create('yt-dlp');
+      return create("yt-dlp");
     } catch (error) {
       console.log("⚠️  System yt-dlp not available, using default instance");
       return youtubedl;
@@ -46,8 +48,8 @@ function getYoutubeDlInstance() {
 
   // For production (Linux/Vercel), try different binary options
   const binaryOptions = [
-    'yt-dlp-standalone', // Standalone binary that doesn't need Python
-    'yt-dlp'            // Regular binary (needs Python)
+    "yt-dlp-standalone", // Standalone binary that doesn't need Python
+    "yt-dlp", // Regular binary (needs Python)
   ];
 
   for (const binaryName of binaryOptions) {
@@ -61,7 +63,7 @@ function getYoutubeDlInstance() {
     );
 
     console.log("Checking for binary at:", binaryPath);
-    
+
     if (fs.existsSync(binaryPath)) {
       console.log(`✅ Found ${binaryName} binary, creating custom instance`);
       return create(binaryPath);

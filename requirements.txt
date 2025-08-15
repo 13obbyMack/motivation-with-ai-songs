@@ -1,2 +1,0 @@
-# Python dependencies for yt-dlp
-# This file ensures Python is available in Vercel environment
