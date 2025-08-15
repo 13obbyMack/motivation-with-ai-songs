@@ -40,7 +40,7 @@ function getYoutubeDlInstance() {
     try {
       // Try to use system yt-dlp on Windows
       return create("yt-dlp");
-    } catch (error) {
+    } catch {
       console.log("⚠️  System yt-dlp not available, using default instance");
       return youtubedl;
     }

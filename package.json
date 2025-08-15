@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=\"--no-deprecation\" next dev --turbopack",
     "dev:verbose": "next dev --turbopack",
-    "build": "node scripts/prepare-binary.js && next build",
+    "build": "node -e \"const fs=require('fs'),path=require('path');const binDir=path.join(__dirname,'src','app','api','bin');['yt-dlp','yt-dlp.exe','yt-dlp-standalone'].forEach(b=>{const p=path.join(binDir,b);if(fs.existsSync(p)){fs.chmodSync(p,0o755);console.log('✅ Made',b,'executable')}})\" && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
