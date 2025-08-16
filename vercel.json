@@ -1,7 +1,7 @@
 {
   "functions": {
     "src/app/api/extract-audio/route.ts": {
-      "maxDuration": 60,
+      "maxDuration": 120,
       "memory": 1024
     },
     "src/app/api/splice-audio/route.ts": {
@@ -86,7 +86,7 @@
   ],
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1",
-    "YOUTUBE_DL_SKIP_DOWNLOAD": "true",
+    "YOUTUBE_DL_SKIP_DOWNLOAD": "false",
     "NODE_OPTIONS": "--no-deprecation"
   },
   "trailingSlash": false,

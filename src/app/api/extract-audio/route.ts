@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import youtubedl, { create } from "youtube-dl-exec";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
-import path from "path";
-import fs from "fs";
 
 // YouTube URL validation regex
 const YOUTUBE_URL_REGEX =
@@ -46,32 +44,11 @@ function getYoutubeDlInstance() {
     }
   }
 
-  // For production (Linux/Vercel), try different binary options
-  const binaryOptions = [
-    "yt-dlp-standalone", // Standalone binary that doesn't need Python
-    "yt-dlp", // Regular binary (needs Python)
-  ];
-
-  for (const binaryName of binaryOptions) {
-    const binaryPath = path.resolve(
-      process.cwd(),
-      "src",
-      "app",
-      "api",
-      "bin",
-      binaryName
-    );
-
-    console.log("Checking for binary at:", binaryPath);
-
-    if (fs.existsSync(binaryPath)) {
-      console.log(`✅ Found ${binaryName} binary, creating custom instance`);
-      return create(binaryPath);
-    }
-  }
-
-  console.log("⚠️  No bundled binary found, using default instance");
-  // Fallback to default instance
+  // For production (Vercel), use the default instance which will download its own binary
+  // This avoids library compatibility issues with our bundled binaries
+  console.log(
+    "🔄 Using default youtube-dl-exec instance (will auto-download compatible binary)"
+  );
   return youtubedl;
 }
 
