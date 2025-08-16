@@ -89,6 +89,7 @@
     "YOUTUBE_DL_SKIP_DOWNLOAD": "false",
     "NODE_OPTIONS": "--no-deprecation"
   },
+
   "trailingSlash": false,
   "cleanUrls": true
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import youtubedl, { create } from "youtube-dl-exec";
 import { ExtractAudioRequest, ExtractAudioResponse } from "@/types";
+import youtubedl from "youtube-dl-exec";
 
 // YouTube URL validation regex
 const YOUTUBE_URL_REGEX =
@@ -23,81 +23,37 @@ interface YoutubeDLInfo {
   formats?: YoutubeDLFormat[];
 }
 
-// Function to get the youtube-dl-exec instance with correct binary path
-function getYoutubeDlInstance() {
-  console.log("Platform:", process.platform);
-  console.log("Current working directory:", process.cwd());
-
-  // Check if we're not on Windows with spaces in path (for local testing)
-  const hasSpacesInPath = process.cwd().includes(" ");
-
-  if (process.platform === "win32" && hasSpacesInPath) {
-    console.log(
-      "⚠️  Windows path contains spaces, trying system yt-dlp for local testing"
-    );
-    try {
-      // Try to use system yt-dlp on Windows
-      return create("yt-dlp");
-    } catch {
-      console.log("⚠️  System yt-dlp not available, using default instance");
-      return youtubedl;
-    }
+// Simplified approach: Let youtube-dl-exec handle everything
+async function getVideoInfoSimple(url: string): Promise<YoutubeDLInfo> {
+  console.log("🔄 Using simplified youtube-dl-exec approach");
+  
+  try {
+    // Clear any environment variables that might interfere
+    delete process.env.YOUTUBE_DL_DIR;
+    delete process.env.YOUTUBE_DL_PATH;
+    delete process.env.YOUTUBE_DL_FILENAME;
+    
+    // Use youtube-dl-exec with minimal options
+    const info = await youtubedl(url, {
+      dumpSingleJson: true,
+      noWarnings: true,
+      format: "bestaudio/best"
+    });
+    
+    return info as YoutubeDLInfo;
+    
+  } catch (error) {
+    console.error("Simplified youtube-dl-exec failed:", error);
+    throw error;
   }
-
-  // For production (Vercel), use the default instance which will download its own binary
-  // This avoids library compatibility issues with our bundled binaries
-  console.log(
-    "🔄 Using default youtube-dl-exec instance (will auto-download compatible binary)"
-  );
-  return youtubedl;
 }
 
-// Function to get video info and audio URL using youtube-dl-exec
+// Function to get video info and audio URL
 async function getVideoInfo(url: string) {
   try {
-    // Get the youtube-dl instance with correct binary
-    const ytdl = getYoutubeDlInstance();
+    console.log("🔄 Getting video info for:", url);
 
-    // First attempt with best audio format
-    let info: YoutubeDLInfo;
-
-    try {
-      info = (await ytdl(url, {
-        dumpSingleJson: true,
-        noCheckCertificates: true,
-        noWarnings: true,
-        preferFreeFormats: true,
-        format: "bestaudio/best",
-        addHeader: [
-          "referer:youtube.com",
-          "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        ],
-      })) as YoutubeDLInfo;
-    } catch (binaryError) {
-      console.warn(
-        "Default binary failed, trying alternative approaches:",
-        binaryError
-      );
-
-      // Try with different format options that might work better in serverless
-      try {
-        info = (await ytdl(url, {
-          dumpSingleJson: true,
-          noCheckCertificates: true,
-          noWarnings: true,
-          preferFreeFormats: true,
-          format: "worst",
-          addHeader: [
-            "referer:youtube.com",
-            "user-agent:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          ],
-        })) as YoutubeDLInfo;
-        console.log("Successfully used fallback format options");
-      } catch (fallbackError) {
-        console.error("All youtube-dl-exec attempts failed:", fallbackError);
-        throw binaryError; // Throw original error
-      }
-    }
+    const info = await getVideoInfoSimple(url);
 
     // Find the best audio format
     let audioUrl = info.url;
@@ -114,7 +70,7 @@ async function getVideoInfo(url: string) {
       audioUrl: audioUrl || undefined,
     };
   } catch (error) {
-    console.error("youtube-dl-exec failed:", error);
+    console.error("Video info extraction failed:", error);
     throw error;
   }
 }
