@@ -1,170 +1,148 @@
-// Simplified API utilities
+/**
+ * API utility functions for communicating with Python serverless functions
+ */
 
-import { 
-  ExtractAudioRequest, 
-  ExtractAudioResponse,
-  GenerateTextRequest,
-  GenerateTextResponse,
-  GetVoicesRequest,
-  GetVoicesResponse,
-  GenerateSpeechRequest,
-  GenerateSpeechResponse,
-  SpliceAudioRequest,
-  SpliceAudioResponse,
-  UserFormData,
-  TTSSettings
-} from '@/types';
+import { UserFormData } from "@/types";
 
-// Basic retry utility for network errors
-async function withRetry<T>(
-  operation: () => Promise<T>,
-  maxAttempts: number = 3,
-  delayMs: number = 1000
+// API URL configuration - same domain for Vercel functions
+const API_BASE_URL =
+  process.env.NODE_ENV === "development" ? "http://localhost:3000" : "";
+
+/**
+ * Make API request to Python backend
+ */
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
 ): Promise<T> {
-  let lastError: Error;
-  
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      lastError = error as Error;
-      
-      // Don't retry on client errors (4xx)
-      if (error instanceof Response && error.status >= 400 && error.status < 500) {
-        throw error;
-      }
-      
-      if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
-      }
-    }
+  const url = `${API_BASE_URL}${endpoint}`;
+
+  const defaultOptions: RequestInit = {
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(url, {
+    ...defaultOptions,
+    ...options,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(
+      errorData.error || `HTTP ${response.status}: ${response.statusText}`
+    );
   }
-  
-  throw lastError!;
+
+  return response.json();
 }
 
-// Extract audio from YouTube
-export async function extractAudio(youtubeUrl: string): Promise<ExtractAudioResponse> {
-  const request: ExtractAudioRequest = { youtubeUrl };
-  
-  return withRetry(async () => {
-    const response = await fetch('/api/extract-audio', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-    
-    return response.json();
+/**
+ * Extract audio from YouTube URL
+ */
+export async function extractAudio(youtubeUrl: string): Promise<{
+  audioData: string;
+  duration: number;
+  title: string;
+  success: boolean;
+  error?: string;
+}> {
+  return apiRequest("/api/extract-audio", {
+    method: "POST",
+    body: JSON.stringify({ youtubeUrl }),
   });
 }
 
-// Generate motivational text
-export async function generateText(apiKey: string, userData: unknown): Promise<GenerateTextResponse> {
-  const request: GenerateTextRequest = { apiKey, userData: userData as UserFormData };
-  
-  return withRetry(async () => {
-    const response = await fetch('/api/generate-text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-    
-    return response.json();
+/**
+ * Generate motivational text using OpenAI
+ */
+export async function generateText(
+  apiKey: string,
+  userData: UserFormData
+): Promise<{
+  motivationalText: string;
+  chunks: string[];
+  success: boolean;
+  error?: string;
+}> {
+  return apiRequest("/api/generate-text", {
+    method: "POST",
+    body: JSON.stringify({ apiKey, userData }),
   });
 }
 
-// Get available voices
-export async function getVoices(apiKey: string): Promise<GetVoicesResponse> {
-  const request: GetVoicesRequest = { apiKey };
-  
-  return withRetry(async () => {
-    const response = await fetch('/api/get-voices', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-    
-    return response.json();
+/**
+ * Get available voices from ElevenLabs
+ */
+export async function getVoices(apiKey: string): Promise<{
+  voices: Array<{
+    voice_id: string;
+    name: string;
+    category: string;
+    description?: string;
+    preview_url?: string;
+  }>;
+  success: boolean;
+  error?: string;
+}> {
+  return apiRequest("/api/get-voices", {
+    method: "POST",
+    body: JSON.stringify({ apiKey }),
   });
 }
 
-// Generate speech from text
+/**
+ * Generate speech using ElevenLabs TTS
+ */
 export async function generateSpeech(
-  apiKey: string, 
-  text: string, 
+  apiKey: string,
+  text: string,
   voiceId: string,
   settings?: unknown,
   modelId?: string,
   outputFormat?: string
-): Promise<GenerateSpeechResponse> {
-  const request: GenerateSpeechRequest = { 
-    apiKey, 
-    text, 
-    voiceId, 
-    settings: settings as TTSSettings | undefined,
-    modelId,
-    outputFormat
-  };
-  
-  return withRetry(async () => {
-    const response = await fetch('/api/generate-speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-    
-    return response.json();
+): Promise<{
+  audioData: string;
+  success: boolean;
+  error?: string;
+}> {
+  return apiRequest("/api/generate-speech", {
+    method: "POST",
+    body: JSON.stringify({
+      apiKey,
+      text,
+      voiceId,
+      settings,
+      modelId,
+      outputFormat,
+    }),
   });
 }
 
-// Splice audio files together
+/**
+ * Splice speech audio with background music
+ */
 export async function spliceAudio(
-  originalAudio: string, // Now expects base64 string
-  speechAudio: string | string[], // Now expects base64 string(s)
-  spliceMode: 'intro' | 'random' | 'distributed' = 'intro',
-  musicDuration?: number,
-  crossfadeDuration?: number
-): Promise<SpliceAudioResponse> {
-  const request: SpliceAudioRequest = { 
-    originalAudio,
-    speechAudio,
-    spliceMode, 
-    crossfadeDuration,
-    musicDuration
-  };
-  
-  return withRetry(async () => {
-    const response = await fetch('/api/splice-audio', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP ${response.status}`);
-    }
-    
-    return response.json();
+  originalAudio: string,
+  speechAudio: string | string[],
+  spliceMode: "intro" | "random" | "distributed" = "intro",
+  crossfadeDuration?: number,
+  musicDuration?: number
+): Promise<{
+  finalAudio: string;
+  success: boolean;
+  error?: string;
+}> {
+  return apiRequest("/api/splice-audio", {
+    method: "POST",
+    body: JSON.stringify({
+      originalAudio,
+      speechAudio,
+      spliceMode,
+      crossfadeDuration,
+      musicDuration,
+    }),
   });
 }

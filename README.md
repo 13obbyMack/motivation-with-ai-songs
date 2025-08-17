@@ -2,6 +2,12 @@
 
 Create personalized motivational audio content by combining your favorite music with AI-generated motivational speeches.
 
+## 🏗️ Architecture
+
+- **Frontend**: Next.js 15 with React 19 (TypeScript)
+- **API**: Python serverless functions (yt-dlp, OpenAI, ElevenLabs)
+- **Deployment**: Single Vercel app with both frontend and API functions
+
 ## ✨ Features
 
 - **🤖 AI-Powered Content**: Generate personalized motivational speeches using OpenAI GPT-4o/GPT-4o-mini
@@ -60,51 +66,58 @@ You'll need API keys from:
 ### Development Setup
 
 ```bash
-# Clone the repository
+# Clone and install dependencies
 git clone <repository-url>
 cd ai-motivation-song-generator
-
-# Install dependencies
 npm install
 
-# Run development server
+# Start development server (includes API functions)
 npm run dev
 ```
+
+**System Requirements:**
+- Node.js 18+
+- Python 3.9+ (for API functions)
+- No additional setup needed - Vercel handles Python dependencies
 
 ### Available Scripts
 
 ```bash
-npm run dev          # Start development server
+npm run dev          # Start development server (frontend + API functions)
 npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
 npm run type-check   # TypeScript type checking
 npm run deploy       # Deploy to Vercel
+npm run deploy:preview # Deploy preview version
 ```
 
 ### Tech Stack
 
 - **Framework**: Next.js 15 with App Router
-- **Language**: TypeScript
+- **Language**: TypeScript (frontend), Python (API functions)
 - **Styling**: Tailwind CSS
-- **Audio Processing**: Server-side with fluent-ffmpeg
-- **APIs**: OpenAI GPT, ElevenLabs TTS
-- **Deployment**: Vercel
+- **API Functions**: Python serverless functions on Vercel
+- **Audio Processing**: yt-dlp, OpenAI GPT, ElevenLabs TTS
+- **Deployment**: Vercel (single app)
 
 ### Project Structure
 
 ```
-src/
-├── app/                 # Next.js app router pages
-│   ├── api/            # API routes
-│   ├── layout.tsx      # Root layout
-│   └── page.tsx        # Home page
-├── components/          # React components
-│   ├── ui/             # Reusable UI components
-│   └── ...             # Feature-specific components
-├── contexts/           # React contexts
-├── types/              # TypeScript type definitions
-└── utils/              # Utility functions
+├── api/                # Python serverless functions
+│   ├── extract-audio.py   # YouTube audio extraction
+│   ├── generate-text.py   # OpenAI text generation
+│   ├── generate-speech.py # ElevenLabs TTS
+│   └── get-voices.py      # ElevenLabs voice retrieval
+├── src/                # Next.js frontend
+│   ├── app/            # Next.js app router pages
+│   ├── components/     # React components
+│   ├── contexts/       # React contexts
+│   ├── types/          # TypeScript type definitions
+│   └── utils/          # Utility functions (including API client)
+├── requirements.txt    # Python dependencies for API functions
+├── vercel.json        # Vercel configuration
+└── package.json       # Frontend dependencies
 ```
 
 ## 🔒 Privacy & Security

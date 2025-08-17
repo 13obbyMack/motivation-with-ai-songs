@@ -28,10 +28,15 @@
 /.github/
 /scripts/
 VERCEL_DEPLOYMENT_GUIDE.md
-/docs
 .DS_Store
 *.pem
 /.vscode/
+/docs
+
+# Python cache files (for API functions)
+__pycache__/
+*.pyc
+*.pyo
 
 # debug
 npm-debug.log*

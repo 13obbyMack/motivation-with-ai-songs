@@ -1,35 +1,31 @@
 {
   "functions": {
-    "src/app/api/extract-audio/route.ts": {
+    "api/extract-audio.py": {
+      "runtime": "python3.9",
       "maxDuration": 120,
       "memory": 1024
     },
-    "src/app/api/splice-audio/route.ts": {
-      "maxDuration": 60,
-      "memory": 1024
-    },
-    "src/app/api/splice-audio-blob/route.ts": {
-      "maxDuration": 60,
-      "memory": 1024
-    },
-    "src/app/api/generate-speech/route.ts": {
+    "api/generate-text.py": {
+      "runtime": "python3.9",
       "maxDuration": 30,
       "memory": 512
     },
-    "src/app/api/generate-text/route.ts": {
-      "maxDuration": 15,
-      "memory": 256
+    "api/generate-speech.py": {
+      "runtime": "python3.9",
+      "maxDuration": 60,
+      "memory": 512
     },
-    "src/app/api/get-voices/route.ts": {
+    "api/get-voices.py": {
+      "runtime": "python3.9",
       "maxDuration": 30,
       "memory": 512
     },
-    "src/app/api/health/route.ts": {
-      "maxDuration": 10,
-      "memory": 256
+    "api/splice-audio.py": {
+      "runtime": "python3.9",
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
-
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
@@ -86,10 +82,8 @@
   ],
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1",
-    "YOUTUBE_DL_SKIP_DOWNLOAD": "false",
     "NODE_OPTIONS": "--no-deprecation"
   },
-
   "trailingSlash": false,
   "cleanUrls": true
 }

@@ -5,28 +5,19 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS=\"--no-deprecation\" next dev --turbopack",
     "dev:verbose": "next dev --turbopack",
-    "build": "node -e \"const fs=require('fs'),path=require('path');const binDir=path.join(__dirname,'src','app','api','bin');['yt-dlp','yt-dlp.exe','yt-dlp-standalone'].forEach(b=>{const p=path.join(binDir,b);if(fs.existsSync(p)){fs.chmodSync(p,0o755);console.log('✅ Made',b,'executable')}})\" && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "type-check": "tsc --noEmit",
-    "deploy": "vercel --prod",
+    "deploy": "node deploy-single-app.js",
     "deploy:preview": "vercel",
-    "deploy:setup": "node deploy.js",
-    "setup:blob": "node scripts/setup-blob-storage.js",
-    "setup:blob:enable": "node scripts/setup-blob-storage.js --enable",
-    "setup:blob:status": "node scripts/setup-blob-storage.js --status"
+    "test:api": "node test-api.js"
   },
   "dependencies": {
-    "@types/fluent-ffmpeg": "^2.1.27",
-    "@vercel/blob": "^1.1.1",
-    "ffmpeg-static": "^5.2.0",
-    "fluent-ffmpeg": "^2.1.3",
     "next": "^15.4.5",
-    "openai": "^5.10.2",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
-    "youtube-dl-exec": "^3.0.24"
+    "react-dom": "19.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

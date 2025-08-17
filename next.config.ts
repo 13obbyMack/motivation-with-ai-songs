@@ -6,13 +6,9 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['react', 'react-dom'],
   },
   
-  // External packages for server components
-  serverExternalPackages: ['fluent-ffmpeg', 'ffmpeg-static'],
-  
-  // Environment variables
+  // Environment variables for backend communication
   env: {
-    FFMPEG_PATH: process.env.FFMPEG_PATH || '/usr/bin/ffmpeg',
-    FFPROBE_PATH: process.env.FFPROBE_PATH || '/usr/bin/ffprobe',
+    NEXT_PUBLIC_BACKEND_URL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000',
   },
 
   // Performance optimizations

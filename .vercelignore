@@ -23,9 +23,6 @@ coverage/
 # Keep scripts for build process
 # /scripts
 
-# Ensure binary is included
-!src/app/api/bin/
-
 # IDE and editor files
 /.vscode/
 .idea/
@@ -43,9 +40,9 @@ Thumbs.db
 .env.production.local
 
 # Documentation (keeping only README)
-/docs
 *.md
 !README.md
+/docs
 
 # Backup files
 *.bak
