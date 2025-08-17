@@ -1,12 +1,7 @@
-"""
-Vercel serverless function for YouTube audio extraction
-"""
-
+from http.server import BaseHTTPRequestHandler
 import json
 import base64
 import re
-from urllib.parse import urlparse
-from http.server import BaseHTTPRequestHandler
 import yt_dlp
 import requests
 
@@ -76,6 +71,13 @@ def download_audio(audio_url: str) -> bytes:
         raise Exception(f"Failed to download audio: {str(e)}")
 
 class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
     def do_POST(self):
         try:
             # Parse request body

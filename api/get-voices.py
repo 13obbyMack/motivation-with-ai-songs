@@ -1,12 +1,15 @@
-"""
-Vercel serverless function for ElevenLabs voice retrieval
-"""
-
-import json
 from http.server import BaseHTTPRequestHandler
+import json
 import requests
 
 class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
     def do_POST(self):
         try:
             # Parse request body
@@ -62,7 +65,7 @@ class handler(BaseHTTPRequestHandler):
                 
             except requests.Timeout:
                 self.send_error_response(504, 'Request timeout - ElevenLabs API took too long to respond')
-            except requests.RequestException as e:
+            except requests.RequestException:
                 self.send_error_response(502, 'Network error connecting to ElevenLabs API')
                 
         except Exception as e:

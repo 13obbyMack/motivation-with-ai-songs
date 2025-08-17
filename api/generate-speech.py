@@ -1,10 +1,6 @@
-"""
-Vercel serverless function for ElevenLabs TTS
-"""
-
+from http.server import BaseHTTPRequestHandler
 import json
 import base64
-from http.server import BaseHTTPRequestHandler
 import requests
 
 # ElevenLabs model configurations
@@ -24,6 +20,13 @@ MOTIVATIONAL_TTS_SETTINGS = {
 }
 
 class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
+
     def do_POST(self):
         try:
             # Parse request body
