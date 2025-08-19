@@ -5,7 +5,8 @@ Create personalized motivational audio content by combining your favorite music 
 ## 🏗️ Architecture
 
 - **Frontend**: Next.js 15 with React 19 (TypeScript)
-- **API**: Python serverless functions (yt-dlp, OpenAI, ElevenLabs)
+- **API**: Python serverless functions (yt-dlp, OpenAI, ElevenLabs, FFmpeg)
+- **Storage**: Vercel Blob for large audio file handling
 - **Deployment**: Single Vercel app with both frontend and API functions
 
 ## ✨ Features
@@ -16,7 +17,8 @@ Create personalized motivational audio content by combining your favorite music 
 - **🎯 Smart Content Distribution**: Intelligently distribute motivational content throughout your music
 - **🔧 Model Selection**: Choose between quality, speed, or balanced ElevenLabs models
 - **🎛️ Advanced Audio Splicing**: Crossfade transitions, volume balancing, and intelligent placement
-- **🔒 Privacy-First**: API keys stored locally, no personal data sent to servers
+- **🍪 YouTube Cookie Support**: Handle age-restricted, region-locked, or private content with cookie authentication
+- **� Privacy-First**: API keys stored locally, no personal data sent to servers
 - **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## 🚀 Quick Start
@@ -24,16 +26,19 @@ Create personalized motivational audio content by combining your favorite music 
 ### Prerequisites
 
 You'll need API keys from:
+
 - **OpenAI** ([platform.openai.com](https://platform.openai.com)) - for text generation
 - **ElevenLabs** ([elevenlabs.io](https://elevenlabs.io)) - for voice synthesis
 
 ### Using the Application
 
 1. **Configure API Keys**
+
    - Enter your OpenAI and ElevenLabs API keys
    - Keys are stored securely in your browser session only
 
 2. **Personalize Your Content**
+
    - Enter your name and create a custom character prompt
    - Choose your preferred ElevenLabs model (quality vs speed)
    - Select an ElevenLabs voice that matches your character
@@ -41,8 +46,10 @@ You'll need API keys from:
    - Add custom instructions (optional)
 
 3. **Select Background Music**
+
    - Provide a YouTube URL for your preferred background music
    - Instrumental tracks work best for clear speech integration
+   - For age-restricted or region-locked content, you can provide YouTube cookies
 
 4. **Generate Your Song**
    - Advanced AI processing with chunk-based TTS generation
@@ -53,10 +60,12 @@ You'll need API keys from:
 ## 💰 Cost Information
 
 ### Typical Usage Costs
+
 - **OpenAI**: ~$0.01-0.05 per song (depending on complexity)
 - **ElevenLabs**: 200-800 characters per song (free tier: 10,000 chars/month, up to 10k chars per request)
 
 ### Monthly Estimates
+
 - **Light usage** (5-10 songs): $1-5
 - **Regular usage** (20-30 songs): $5-15
 - **Heavy usage** (50+ songs): $15-50
@@ -76,6 +85,7 @@ npm run dev
 ```
 
 **System Requirements:**
+
 - Node.js 18+
 - Python 3.9+ (for API functions)
 - No additional setup needed - Vercel handles Python dependencies
@@ -88,8 +98,7 @@ npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
 npm run type-check   # TypeScript type checking
-npm run deploy       # Deploy to Vercel
-npm run deploy:preview # Deploy preview version
+npm run deploy:preview # Deploy preview version to Vercel
 ```
 
 ### Tech Stack
@@ -98,7 +107,8 @@ npm run deploy:preview # Deploy preview version
 - **Language**: TypeScript (frontend), Python (API functions)
 - **Styling**: Tailwind CSS
 - **API Functions**: Python serverless functions on Vercel
-- **Audio Processing**: yt-dlp, OpenAI GPT, ElevenLabs TTS
+- **Audio Processing**: yt-dlp, FFmpeg, OpenAI GPT, ElevenLabs TTS
+- **Storage**: Vercel Blob for large file handling
 - **Deployment**: Vercel (single app)
 
 ### Project Structure
@@ -108,7 +118,8 @@ npm run deploy:preview # Deploy preview version
 │   ├── extract-audio.py   # YouTube audio extraction
 │   ├── generate-text.py   # OpenAI text generation
 │   ├── generate-speech.py # ElevenLabs TTS
-│   └── get-voices.py      # ElevenLabs voice retrieval
+│   ├── get-voices.py      # ElevenLabs voice retrieval
+│   └── splice-audio.py    # Advanced audio mixing and processing
 ├── src/                # Next.js frontend
 │   ├── app/            # Next.js app router pages
 │   ├── components/     # React components
@@ -124,6 +135,7 @@ npm run deploy:preview # Deploy preview version
 
 - **API Keys**: Stored only in browser session storage, never on servers
 - **Audio Files**: Processed temporarily and automatically deleted
+- **YouTube Cookies**: Used only for the specific request, never stored or logged
 - **Personal Data**: No personal information stored or transmitted to servers
 - **HTTPS**: All communications encrypted in transit
 
@@ -147,12 +159,14 @@ After creating your character prompt, select an appropriate ElevenLabs voice tha
 ## 🎵 Music Recommendations
 
 ### Best Results
+
 - ✅ Instrumental tracks (no vocals)
 - ✅ 3-5 minute duration
 - ✅ Moderate tempo
 - ✅ High-quality uploads
 
 ### Avoid
+
 - ❌ Songs with constant vocals
 - ❌ Very short or very long tracks
 - ❌ Poor audio quality
@@ -161,18 +175,38 @@ After creating your character prompt, select an appropriate ElevenLabs voice tha
 ## 🆘 Common Issues
 
 ### API Key Problems
+
 - Verify keys are correct and accounts have sufficient credits
 - Ensure billing information is set up for both services
 
 ### YouTube Issues
+
 - Ensure videos are public and high-quality
 - Try different videos if extraction fails
 
+#### Age-Restricted or Region-Locked Content
+
+If you encounter issues with restricted YouTube content, you can use YouTube cookies:
+
+1. **Export cookies from your browser** using a browser extension like "Get cookies.txt LOCALLY"
+2. **Paste the cookie data** into the YouTube Cookies field in the app
+3. **Cookies are processed securely** and only used for that specific request
+4. **No cookies are stored** - they're used once and discarded
+
+**Supported restrictions:**
+
+- Age-restricted content (18+ videos)
+- Region-locked content (geo-blocked videos)
+- Private/unlisted videos (if you have access)
+- Premium content (if you're subscribed)
+
 ### Processing Failures
+
 - Try shorter songs and stable internet connection
 - Close other browser tabs to free memory
 
 ### Audio Quality
+
 - Use instrumental tracks for best speech integration
 - Ensure source video has good audio quality
 
