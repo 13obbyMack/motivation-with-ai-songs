@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { AudioProcessorProps, ProcessingStep } from '@/types';
-import { extractAudio, generateText, generateSpeech, spliceAudio } from '@/utils/api';
+import { extractAudio, generateText, generateSpeech, spliceAudio, testBlobStorage, debugEnvironment, testBlobSimple } from '@/utils/api';
+import { Card } from './ui/Card';
 
 
 const STEP_DESCRIPTIONS = {
@@ -24,6 +25,11 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<ProcessingStep | null>(null);
   const [progress, setProgress] = useState(0);
+  const [blobStorageStatus, setBlobStorageStatus] = useState<{
+    checked: boolean;
+    available: boolean;
+    error?: string;
+  }>({ checked: false, available: false });
 
   const updateProgress = (step: ProcessingStep, stepProgress: number) => {
     const stepIndex = Object.values(ProcessingStep).indexOf(step);
@@ -38,8 +44,71 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
     });
   };
 
+  const checkBlobStorage = async () => {
+    try {
+      console.log('Checking environment and blob storage availability...');
+      
+      // First check the environment
+      const envDebug = await debugEnvironment();
+      console.log('Environment debug:', envDebug);
+      
+      // Test simple blob storage
+      const blobSimpleTest = await testBlobSimple();
+      console.log('Simple blob test:', blobSimpleTest);
+      
+      // Then test blob storage
+      const blobTest = await testBlobStorage();
+      console.log('Blob storage test:', blobTest);
+      
+      setBlobStorageStatus({
+        checked: true,
+        available: blobTest.success,
+        error: blobTest.success ? undefined : blobTest.error
+      });
+      
+      if (!blobTest.success) {
+        console.error('Blob storage check failed:', blobTest);
+        
+        let errorMessage = `Blob storage not available: ${blobTest.error || 'Unknown error'}`;
+        if (blobTest.details) {
+          errorMessage += `. ${blobTest.details}`;
+        }
+        
+        // Add environment info to error if available
+        if (!envDebug.success) {
+          errorMessage += ` (Environment check also failed: ${envDebug.error})`;
+        } else if (!envDebug.blob_available) {
+          errorMessage += ` (vercel_blob package not available: ${envDebug.blob_version})`;
+        } else if (!envDebug.has_blob_token) {
+          errorMessage += ` (BLOB_READ_WRITE_TOKEN not set)`;
+        }
+        
+        onError(errorMessage);
+        return false;
+      }
+      
+      console.log('✅ Blob storage is available and working');
+      return true;
+    } catch (error) {
+      console.error('Blob storage check error:', error);
+      setBlobStorageStatus({
+        checked: true,
+        available: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      onError(`Failed to check blob storage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return false;
+    }
+  };
+
   const startProcessing = async () => {
     if (isProcessing) return;
+
+    // First check blob storage
+    const blobAvailable = await checkBlobStorage();
+    if (!blobAvailable) {
+      return; // Error already handled in checkBlobStorage
+    }
 
     setIsProcessing(true);
     
@@ -48,10 +117,12 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
       setCurrentStep(ProcessingStep.DOWNLOADING_AUDIO);
       updateProgress(ProcessingStep.DOWNLOADING_AUDIO, 0);
       
-      const audioResponse = await extractAudio(formData.youtubeUrl);
+      const audioResponse = await extractAudio(formData.youtubeUrl, apiKeys.youtubeCookies);
       if (!audioResponse.success) {
         throw new Error(audioResponse.error || 'Failed to extract audio');
       }
+      
+      console.log(`YouTube audio extracted via: ${audioResponse.deliveryMethod}, size: ${audioResponse.audioSize || 'unknown'}`);
       updateProgress(ProcessingStep.DOWNLOADING_AUDIO, 100);
 
       // Step 2: Generate text
@@ -89,8 +160,20 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
         if (!speechResponse.success) {
           throw new Error(speechResponse.error || `Failed to generate speech for chunk ${i + 1}`);
         }
+
+        // Log delivery method for debugging
+        console.log(`Chunk ${i + 1} delivered via: ${speechResponse.deliveryMethod}, size: ${speechResponse.audioSize || 'unknown'}`);
         
-        speechChunks.push(speechResponse.audioData);
+        // Prefer blob URL over base64 to avoid large payloads
+        if (speechResponse.audioUrl) {
+          speechChunks.push(speechResponse.audioUrl);
+          console.log(`Using blob URL for chunk ${i + 1}: ${speechResponse.audioUrl}`);
+        } else if (speechResponse.audioData) {
+          speechChunks.push(speechResponse.audioData);
+          console.log(`Using base64 for chunk ${i + 1} (fallback)`);
+        } else {
+          throw new Error(`No audio data or URL received for chunk ${i + 1}`);
+        }
       }
       
       updateProgress(ProcessingStep.GENERATING_SPEECH, 100);
@@ -99,21 +182,59 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
       setCurrentStep(ProcessingStep.SPLICING_AUDIO);
       updateProgress(ProcessingStep.SPLICING_AUDIO, 0);
       
+      // Ensure we have audio data from the extract audio step
+      if (!audioResponse.audioData) {
+        throw new Error('No audio data received from YouTube extraction');
+      }
+
+      // Use blob URLs if available to avoid large request payloads
+      const originalAudioInput = audioResponse.audioUrl || audioResponse.audioData;
+      
+      // Separate blob URLs from base64 data
+      const speechUrls: string[] = [];
+      const speechBase64: string[] = [];
+      
+      speechChunks.forEach((chunk, index) => {
+        if (typeof chunk === 'string' && chunk.startsWith('http')) {
+          speechUrls.push(chunk);
+          console.log(`Speech chunk ${index + 1}: using blob URL`);
+        } else {
+          speechBase64.push(chunk);
+          console.log(`Speech chunk ${index + 1}: using base64`);
+        }
+      });
+      
+      // Use blob URLs if we have them, otherwise fall back to base64
+      const speechInput = speechUrls.length > 0 ? speechUrls : speechBase64;
+      
+      console.log('Splicing audio with:', {
+        originalType: audioResponse.audioUrl ? 'blob URL' : 'base64',
+        speechChunks: speechChunks.length,
+        originalSize: audioResponse.audioSize
+      });
+
       const spliceResponse = await spliceAudio(
-        audioResponse.audioData,
-        speechChunks,
+        originalAudioInput,
+        speechInput,
         'distributed', // Use distributed mode for better integration
         audioResponse.duration
       );
       if (!spliceResponse.success) {
         throw new Error(spliceResponse.error || 'Failed to splice audio');
       }
+      
+      console.log(`Final audio spliced via: ${spliceResponse.deliveryMethod}, size: ${spliceResponse.audioSize || 'unknown'}`);
       updateProgress(ProcessingStep.SPLICING_AUDIO, 100);
 
       // Step 5: Finalize
       setCurrentStep(ProcessingStep.FINALIZING);
       updateProgress(ProcessingStep.FINALIZING, 0);
       
+      // Ensure we have final audio data
+      if (!spliceResponse.finalAudio) {
+        throw new Error('No final audio data received from splicing');
+      }
+
       // Convert base64 to blob
       const audioData = typeof spliceResponse.finalAudio === 'string' 
         ? atob(spliceResponse.finalAudio)
@@ -138,20 +259,50 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Audio Processing</h2>
+    <Card variant="elevated">
+      <h2 className="text-2xl font-bold text-foreground mb-6">Audio Processing</h2>
       
       {!isProcessing && !currentStep && (
         <div className="text-center">
-          <p className="text-gray-600 mb-6">
+          {blobStorageStatus.checked && (
+            <div className={`mb-4 p-3 rounded-lg border ${
+              blobStorageStatus.available 
+                ? 'bg-green-50 border-green-200 text-green-800' 
+                : 'bg-red-50 border-red-200 text-red-800'
+            }`}>
+              <div className="flex items-center justify-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${
+                  blobStorageStatus.available ? 'bg-green-500' : 'bg-red-500'
+                }`}></span>
+                <span className="font-medium">
+                  Blob Storage: {blobStorageStatus.available ? 'Available' : 'Not Available'}
+                </span>
+              </div>
+              {blobStorageStatus.error && (
+                <p className="text-sm mt-1">{blobStorageStatus.error}</p>
+              )}
+            </div>
+          )}
+          
+          <p className="text-muted-foreground mb-6">
             Ready to create your motivational song!
           </p>
           <button
             onClick={startProcessing}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={blobStorageStatus.checked && !blobStorageStatus.available}
+            className="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Start Processing
           </button>
+          
+          {!blobStorageStatus.checked && (
+            <button
+              onClick={checkBlobStorage}
+              className="ml-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/90 transition-colors"
+            >
+              Check Blob Storage
+            </button>
+          )}
         </div>
       )}
 
@@ -159,30 +310,30 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
         <div className="space-y-6">
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-sm font-medium text-foreground">
                 {STEP_DESCRIPTIONS[currentStep]}
               </span>
-              <span className="text-sm text-gray-500">{progress}%</span>
+              <span className="text-sm text-muted-foreground">{progress}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-progress-bg rounded-full h-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-progress-fill h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800 text-sm">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <p className="text-primary text-sm">
               <strong>Current Step:</strong> {STEP_DESCRIPTIONS[currentStep]}
             </p>
-            <p className="text-blue-700 text-sm mt-1">
+            <p className="text-primary/80 text-sm mt-1">
               Please keep this page open while processing.
             </p>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 };
 

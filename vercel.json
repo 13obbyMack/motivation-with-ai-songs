@@ -1,28 +1,24 @@
 {
+
   "functions": {
     "api/extract-audio.py": {
-      "runtime": "@vercel/python",
-      "maxDuration": 120,
+      "maxDuration": 300,
       "memory": 1024
     },
     "api/generate-text.py": {
-      "runtime": "@vercel/python",
-      "maxDuration": 30,
-      "memory": 512
-    },
-    "api/generate-speech.py": {
-      "runtime": "@vercel/python",
       "maxDuration": 60,
       "memory": 512
     },
+    "api/generate-speech.py": {
+      "maxDuration": 180,
+      "memory": 1024
+    },
     "api/get-voices.py": {
-      "runtime": "@vercel/python",
       "maxDuration": 30,
       "memory": 512
     },
     "api/splice-audio.py": {
-      "runtime": "@vercel/python",
-      "maxDuration": 60,
+      "maxDuration": 240,
       "memory": 1024
     }
   },

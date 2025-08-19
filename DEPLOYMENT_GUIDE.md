@@ -58,6 +58,20 @@ No environment variables needed! API keys are entered by users in the app interf
 
 ## Troubleshooting
 
+### YouTube Extraction Issues
+
+**"Sign in to confirm you're not a bot" Error:**
+- This is YouTube's anti-bot protection
+- **Solution**: Try again in a few minutes - it's usually temporary
+- **Alternative**: Use different YouTube videos
+- **Why it happens**: YouTube blocks automated requests during high traffic
+
+**Tips for Better Success:**
+- Use popular, public videos (not private/unlisted)
+- Avoid age-restricted content
+- Try shorter videos (under 5 minutes work best)
+- If one video fails, try another
+
 ### Deployment Issues
 ```bash
 # Check deployment status
@@ -76,6 +90,7 @@ vercel logs <deployment-url>
 1. **Build fails**: Run `npm run build` locally to test
 2. **Functions timeout**: Optimize code or upgrade Vercel plan
 3. **Python errors**: Check function logs in Vercel dashboard
+4. **YouTube blocks**: Wait a few minutes and try different videos
 
 ## Monitoring
 

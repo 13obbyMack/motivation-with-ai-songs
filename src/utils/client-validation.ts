@@ -3,42 +3,30 @@
  */
 
 export const FILE_SIZE_LIMITS = {
-  MAX_TOTAL_SIZE: 10 * 1024 * 1024, // 10MB
-  VERCEL_LIMIT: 4.5 * 1024 * 1024,  // 4.5MB
+  // Removed size limits since we use blob storage
+  // Keep for reference only
+  REFERENCE_VERCEL_LIMIT: 4.5 * 1024 * 1024,  // 4.5MB (reference only)
 } as const;
 
 /**
- * Validates file size on the client side before upload
+ * Validates file size on the client side - Now just logs since we use blob storage
  */
 export function validateClientFileSize(file: File): { isValid: boolean; error?: string } {
-  if (file.size > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
-    return {
-      isValid: false,
-      error: `File "${file.name}" is too large (${formatBytes(file.size)}). Maximum allowed size is 10MB.`,
-    };
-  }
-
-  if (file.size > FILE_SIZE_LIMITS.VERCEL_LIMIT) {
-    console.warn(
-      `File "${file.name}" size (${formatBytes(file.size)}) may cause processing issues on Vercel.`
-    );
-  }
+  // Since we use blob storage, we don't enforce size limits
+  // Just log for monitoring purposes
+  console.log(`File "${file.name}" size: ${formatBytes(file.size)} (blob storage handles all sizes)`);
 
   return { isValid: true };
 }
 
 /**
- * Validates multiple files total size
+ * Validates multiple files total size - Now just logs since we use blob storage
  */
 export function validateMultipleFiles(files: File[]): { isValid: boolean; error?: string } {
   const totalSize = files.reduce((sum, file) => sum + file.size, 0);
   
-  if (totalSize > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
-    return {
-      isValid: false,
-      error: `Total file size (${formatBytes(totalSize)}) exceeds 10MB limit. Please use smaller files.`,
-    };
-  }
+  // Since we use blob storage, we don't enforce size limits
+  console.log(`Total file size: ${formatBytes(totalSize)} (blob storage handles all sizes)`);
 
   return { isValid: true };
 }

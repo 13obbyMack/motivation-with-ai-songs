@@ -66,10 +66,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-foreground mb-2">
           Voice Model
         </label>
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           Choose the ElevenLabs model that best fits your needs
         </p>
       </div>
@@ -84,26 +84,26 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               key={modelId}
               className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-border/80'
               }`}
               onClick={() => handleModelChange(modelId as ElevenLabsModel)}
             >
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="font-semibold text-gray-900">{info.name}</h3>
-                  <p className="text-sm text-gray-600">{info.description}</p>
+                  <h3 className="font-semibold text-foreground">{info.name}</h3>
+                  <p className="text-sm text-muted-foreground">{info.description}</p>
                 </div>
                 <div className={`w-4 h-4 rounded-full border-2 ${
-                  isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                  isSelected ? 'border-primary bg-primary' : 'border-border'
                 }`}>
                   {isSelected && (
-                    <div className="w-2 h-2 bg-white rounded-full m-0.5"></div>
+                    <div className="w-2 h-2 bg-primary-foreground rounded-full m-0.5"></div>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 mb-2">
+              <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-2">
                 <div>Speed: <span className="font-medium">{info.speed}</span></div>
                 <div>Quality: <span className="font-medium">{info.quality}</span></div>
                 <div>Languages: <span className="font-medium">{info.languages}</span></div>
@@ -111,10 +111,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               </div>
 
               <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                info.recommended === 'Quality' ? 'bg-green-100 text-green-800' :
-                info.recommended === 'Speed' ? 'bg-blue-100 text-blue-800' :
-                info.recommended === 'Balanced' ? 'bg-purple-100 text-purple-800' :
-                'bg-orange-100 text-orange-800'
+                info.recommended === 'Quality' ? 'bg-success/20 text-success' :
+                info.recommended === 'Speed' ? 'bg-primary/20 text-primary' :
+                info.recommended === 'Balanced' ? 'bg-accent text-accent-foreground' :
+                'bg-warning/20 text-warning'
               }`}>
                 Best for: {info.recommended}
               </div>
@@ -123,10 +123,10 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         })}
       </div>
 
-      <div className="bg-gray-50 p-3 rounded-lg">
-        <h4 className="font-medium text-gray-900 mb-1">Selected: {MODEL_INFO[currentModel].name}</h4>
-        <p className="text-sm text-gray-600">{MODEL_INFO[currentModel].description}</p>
-        <p className="text-xs text-gray-500 mt-1">
+      <div className="bg-muted p-3 rounded-lg">
+        <h4 className="font-medium text-foreground mb-1">Selected: {MODEL_INFO[currentModel].name}</h4>
+        <p className="text-sm text-muted-foreground">{MODEL_INFO[currentModel].description}</p>
+        <p className="text-xs text-muted-foreground mt-1">
           Character limit: {MODEL_LIMITS[currentModel].toLocaleString()} characters
         </p>
       </div>

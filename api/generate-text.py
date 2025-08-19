@@ -51,7 +51,7 @@ def chunk_text(text: str) -> list:
     chunks = []
     current_chunk = ""
     current_word_count = 0
-    target_words = 150
+    target_words = 100  # Reduced from 150 to create smaller audio files
     
     for sentence in sentences:
         sentence_words = len(sentence.split())

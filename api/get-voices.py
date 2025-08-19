@@ -12,7 +12,6 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            # Parse request body
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             data = json.loads(post_data.decode('utf-8'))
@@ -30,7 +29,7 @@ class handler(BaseHTTPRequestHandler):
             }
             
             try:
-                response = requests.get('https://api.elevenlabs.io/v1/voices', headers=headers, timeout=25)
+                response = requests.get('https://api.elevenlabs.io/v1/voices', headers=headers, timeout=60)
                 
                 if not response.ok:
                     error_message = 'Failed to retrieve voices from ElevenLabs'

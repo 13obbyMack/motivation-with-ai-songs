@@ -16,6 +16,7 @@ const APIKeyManager: React.FC<APIKeyManagerProps> = ({
   const [formKeys, setFormKeys] = useState<APIKeys>({
     openaiKey: apiKeys?.openaiKey || "",
     elevenlabsKey: apiKeys?.elevenlabsKey || "",
+    youtubeCookies: apiKeys?.youtubeCookies || "",
   });
   const [showKeys, setShowKeys] = useState({
     openai: false,
@@ -36,7 +37,7 @@ const APIKeyManager: React.FC<APIKeyManagerProps> = ({
     e.preventDefault();
 
     if (!formKeys.openaiKey.trim() || !formKeys.elevenlabsKey.trim()) {
-      setError("Both API keys are required");
+      setError("Both OpenAI and ElevenLabs API keys are required");
       return;
     }
 
@@ -71,6 +72,7 @@ const APIKeyManager: React.FC<APIKeyManagerProps> = ({
       setFormKeys({
         openaiKey: sanitizeAPIKey(apiKeys.openaiKey),
         elevenlabsKey: sanitizeAPIKey(apiKeys.elevenlabsKey),
+        youtubeCookies: apiKeys.youtubeCookies || "",
       });
     }
   };
@@ -80,6 +82,7 @@ const APIKeyManager: React.FC<APIKeyManagerProps> = ({
     setFormKeys({
       openaiKey: "",
       elevenlabsKey: "",
+      youtubeCookies: "",
     });
     setIsEditing(true);
   };
@@ -225,6 +228,33 @@ const APIKeyManager: React.FC<APIKeyManagerProps> = ({
                 </button>
               }
             />
+          </div>
+
+          {/* YouTube Cookies */}
+          <div>
+            <label htmlFor="youtube-cookies" className="block text-sm font-medium text-foreground mb-2">
+              YouTube Cookies (Optional)
+            </label>
+            <textarea
+              id="youtube-cookies"
+              value={formKeys.youtubeCookies || ""}
+              onChange={(e) => handleInputChange("youtubeCookies", e.target.value)}
+              placeholder="Paste your YouTube cookies file content here (Netscape format)..."
+              disabled={!isEditing || isValidating || isLoading}
+              rows={4}
+              className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Upload your YouTube cookies to bypass bot detection. Export cookies from your browser using a cookies extension. 
+              <a 
+                href="https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:underline ml-1"
+              >
+                Learn how →
+              </a>
+            </p>
           </div>
 
           {/* Action Buttons */}

@@ -67,19 +67,19 @@ export const MotivationalSongWorkflow: React.FC<
         <div
           className={`flex items-center space-x-2 ${
             currentStep === "form"
-              ? "text-blue-600"
+              ? "text-primary"
               : currentStep === "processing" || currentStep === "complete"
-              ? "text-green-600"
-              : "text-gray-400"
+              ? "text-success"
+              : "text-muted-foreground"
           }`}
         >
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center ${
               currentStep === "form"
-                ? "bg-blue-100 border-2 border-blue-600"
+                ? "bg-primary/20 border-2 border-primary"
                 : currentStep === "processing" || currentStep === "complete"
-                ? "bg-green-100 border-2 border-green-600"
-                : "bg-gray-100 border-2 border-gray-300"
+                ? "bg-success/20 border-2 border-success"
+                : "bg-muted border-2 border-border"
             }`}
           >
             <span className="text-sm font-bold">1</span>
@@ -90,27 +90,27 @@ export const MotivationalSongWorkflow: React.FC<
         <div
           className={`w-8 h-1 ${
             currentStep === "processing" || currentStep === "complete"
-              ? "bg-green-600"
-              : "bg-gray-300"
+              ? "bg-success"
+              : "bg-border"
           }`}
         ></div>
 
         <div
           className={`flex items-center space-x-2 ${
             currentStep === "processing"
-              ? "text-blue-600"
+              ? "text-primary"
               : currentStep === "complete"
-              ? "text-green-600"
-              : "text-gray-400"
+              ? "text-success"
+              : "text-muted-foreground"
           }`}
         >
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center ${
               currentStep === "processing"
-                ? "bg-blue-100 border-2 border-blue-600"
+                ? "bg-primary/20 border-2 border-primary"
                 : currentStep === "complete"
-                ? "bg-green-100 border-2 border-green-600"
-                : "bg-gray-100 border-2 border-gray-300"
+                ? "bg-success/20 border-2 border-success"
+                : "bg-muted border-2 border-border"
             }`}
           >
             <span className="text-sm font-bold">2</span>
@@ -120,20 +120,20 @@ export const MotivationalSongWorkflow: React.FC<
 
         <div
           className={`w-8 h-1 ${
-            currentStep === "complete" ? "bg-green-600" : "bg-gray-300"
+            currentStep === "complete" ? "bg-success" : "bg-border"
           }`}
         ></div>
 
         <div
           className={`flex items-center space-x-2 ${
-            currentStep === "complete" ? "text-green-600" : "text-gray-400"
+            currentStep === "complete" ? "text-success" : "text-muted-foreground"
           }`}
         >
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center ${
               currentStep === "complete"
-                ? "bg-green-100 border-2 border-green-600"
-                : "bg-gray-100 border-2 border-gray-300"
+                ? "bg-success/20 border-2 border-success"
+                : "bg-muted border-2 border-border"
             }`}
           >
             <span className="text-sm font-bold">3</span>
@@ -181,10 +181,10 @@ export const MotivationalSongWorkflow: React.FC<
       {currentStep === "complete" && finalAudio && (
         <div className="space-y-6">
           <div className="text-center">
-            <h2 className="text-2xl font-bold text-green-600 mb-2">
+            <h2 className="text-2xl font-bold text-success mb-2">
               🎉 Your Motivational Song is Ready!
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground">
               Your personalized motivational content has been created
               successfully.
             </p>
@@ -194,14 +194,8 @@ export const MotivationalSongWorkflow: React.FC<
             audioBlob={finalAudio}
             filename={generateFilename()}
             onDownload={() => {
-              const url = URL.createObjectURL(finalAudio);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = generateFilename();
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
+              // Download is handled by AudioPlayer component
+              console.log('Download completed');
             }}
             onReset={handleReset}
           />

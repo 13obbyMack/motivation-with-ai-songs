@@ -31,6 +31,8 @@ async function apiRequest<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    
+    // Return the actual error message from the API
     throw new Error(
       errorData.error || `HTTP ${response.status}: ${response.statusText}`
     );
@@ -42,17 +44,77 @@ async function apiRequest<T>(
 /**
  * Extract audio from YouTube URL
  */
-export async function extractAudio(youtubeUrl: string): Promise<{
-  audioData: string;
+export async function extractAudio(youtubeUrl: string, youtubeCookies?: string): Promise<{
+  audioData?: string;
+  audioUrl?: string;
   duration: number;
   title: string;
   success: boolean;
   error?: string;
+  deliveryMethod?: string;
+  audioSize?: string;
 }> {
-  return apiRequest("/api/extract-audio", {
+  const response = await apiRequest<{
+    audioUrl?: string;
+    duration: number;
+    title: string;
+    success: boolean;
+    error?: string;
+    deliveryMethod?: string;
+    audioSize?: string;
+  }>("/api/extract-audio", {
     method: "POST",
-    body: JSON.stringify({ youtubeUrl }),
+    body: JSON.stringify({ youtubeUrl, youtubeCookies }),
   });
+
+  // All responses should be blob URLs now
+  if (response.success && response.audioUrl) {
+    try {
+      console.log(`Fetching YouTube audio from blob URL: ${response.audioUrl}`);
+      const audioResponse = await fetch(response.audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to fetch YouTube audio from blob storage: ${audioResponse.statusText}`);
+      }
+      
+      const audioBuffer = await audioResponse.arrayBuffer();
+      console.log(`YouTube audio ArrayBuffer size: ${audioBuffer.byteLength} bytes`);
+      
+      // Convert ArrayBuffer to base64 efficiently
+      const audioBase64 = await new Promise<string>((resolve, reject) => {
+        const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (!result || typeof result !== 'string') {
+            reject(new Error('FileReader returned invalid result'));
+            return;
+          }
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            reject(new Error('Failed to extract base64 from data URL'));
+            return;
+          }
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+      
+      return {
+        ...response,
+        audioData: audioBase64,
+      };
+    } catch (error) {
+      console.error('Failed to fetch YouTube audio from blob URL:', error);
+      return {
+        ...response,
+        success: false,
+        error: `Failed to fetch YouTube audio from blob storage: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  return response;
 }
 
 /**
@@ -104,11 +166,20 @@ export async function generateSpeech(
   modelId?: string,
   outputFormat?: string
 ): Promise<{
-  audioData: string;
+  audioData?: string;
+  audioUrl?: string;
+  deliveryMethod: 'blob' | 'error';
+  audioSize?: string;
   success: boolean;
   error?: string;
 }> {
-  return apiRequest("/api/generate-speech", {
+  const response = await apiRequest<{
+    audioUrl?: string;
+    deliveryMethod: 'blob' | 'error';
+    audioSize?: string;
+    success: boolean;
+    error?: string;
+  }>("/api/generate-speech", {
     method: "POST",
     body: JSON.stringify({
       apiKey,
@@ -119,6 +190,60 @@ export async function generateSpeech(
       outputFormat,
     }),
   });
+
+  // All responses should be blob URLs now
+  if (response.success && response.audioUrl) {
+    try {
+      console.log(`Fetching audio from blob URL: ${response.audioUrl}`);
+      console.log(`Audio size from API: ${response.audioSize || 'unknown'}`);
+      
+      const audioResponse = await fetch(response.audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to fetch audio from blob storage: ${audioResponse.statusText}`);
+      }
+      
+      const audioBuffer = await audioResponse.arrayBuffer();
+      console.log(`ArrayBuffer size: ${audioBuffer.byteLength} bytes (${(audioBuffer.byteLength / 1024 / 1024).toFixed(2)}MB)`);
+      
+      // Convert ArrayBuffer to base64 efficiently
+      const audioBase64 = await new Promise<string>((resolve, reject) => {
+        const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (!result || typeof result !== 'string') {
+            reject(new Error('FileReader returned invalid result'));
+            return;
+          }
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            reject(new Error('Failed to extract base64 from data URL'));
+            return;
+          }
+          console.log(`Converted to base64: ${base64.length} characters`);
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+      
+      return {
+        ...response,
+        audioData: audioBase64,
+        deliveryMethod: 'blob' as const,
+      };
+    } catch (error) {
+      console.error('Failed to fetch audio from blob URL:', error);
+      return {
+        ...response,
+        success: false,
+        error: `Failed to fetch audio from blob storage: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        deliveryMethod: 'error' as const,
+      };
+    }
+  }
+
+  return response;
 }
 
 /**
@@ -131,18 +256,160 @@ export async function spliceAudio(
   crossfadeDuration?: number,
   musicDuration?: number
 ): Promise<{
-  finalAudio: string;
+  finalAudio?: string;
+  finalAudioUrl?: string;
   success: boolean;
   error?: string;
+  deliveryMethod?: string;
+  audioSize?: string;
 }> {
-  return apiRequest("/api/splice-audio", {
+  // Determine if originalAudio is a blob URL or base64
+  const isOriginalBlobUrl = originalAudio.startsWith('http');
+  
+  // Determine if speechAudio contains blob URLs or base64 data
+  const speechArray = Array.isArray(speechAudio) ? speechAudio : [speechAudio];
+  const hasSpeechUrls = speechArray.length > 0 && speechArray[0] && speechArray[0].startsWith('http');
+  
+  const requestBody: {
+    spliceMode: string;
+    crossfadeDuration?: number;
+    musicDuration?: number;
+    originalAudio?: string;
+    originalAudioUrl?: string;
+    speechAudio?: string | string[];
+    speechAudioUrls?: string[];
+  } = {
+    spliceMode,
+    crossfadeDuration,
+    musicDuration,
+  };
+  
+  // Send blob URL or base64 data accordingly for original audio
+  if (isOriginalBlobUrl) {
+    requestBody.originalAudioUrl = originalAudio;
+    console.log('Sending original audio as blob URL to avoid large payload');
+  } else {
+    requestBody.originalAudio = originalAudio;
+    console.log('Sending original audio as base64 (fallback)');
+  }
+  
+  // Send blob URLs or base64 data accordingly for speech audio
+  if (hasSpeechUrls) {
+    requestBody.speechAudioUrls = speechArray;
+    console.log(`Sending ${speechArray.length} speech chunks as blob URLs to avoid large payload`);
+  } else {
+    requestBody.speechAudio = speechAudio;
+    console.log(`Sending ${speechArray.length} speech chunks as base64 (fallback)`);
+  }
+  
+  const response = await apiRequest<{
+    finalAudioUrl?: string;
+    success: boolean;
+    error?: string;
+    deliveryMethod?: string;
+    audioSize?: string;
+  }>("/api/splice-audio", {
     method: "POST",
-    body: JSON.stringify({
-      originalAudio,
-      speechAudio,
-      spliceMode,
-      crossfadeDuration,
-      musicDuration,
-    }),
+    body: JSON.stringify(requestBody),
+  });
+
+  // All responses should be blob URLs now
+  if (response.success && response.finalAudioUrl) {
+    try {
+      console.log(`Fetching final audio from blob URL: ${response.finalAudioUrl}`);
+      const audioResponse = await fetch(response.finalAudioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to fetch final audio from blob storage: ${audioResponse.statusText}`);
+      }
+      
+      const audioBuffer = await audioResponse.arrayBuffer();
+      console.log(`Final audio ArrayBuffer size: ${audioBuffer.byteLength} bytes`);
+      
+      // Convert ArrayBuffer to base64 efficiently
+      const audioBase64 = await new Promise<string>((resolve, reject) => {
+        const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (!result || typeof result !== 'string') {
+            reject(new Error('FileReader returned invalid result'));
+            return;
+          }
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            reject(new Error('Failed to extract base64 from data URL'));
+            return;
+          }
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+      
+      return {
+        ...response,
+        finalAudio: audioBase64,
+      };
+    } catch (error) {
+      console.error('Failed to fetch final audio from blob URL:', error);
+      return {
+        ...response,
+        success: false,
+        error: `Failed to fetch final audio from blob storage: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  return response;
+}
+
+/**
+ * Test blob storage availability and configuration
+ */
+export async function testBlobStorage(): Promise<{
+  success: boolean;
+  hasToken: boolean;
+  canUpload: boolean;
+  testUrl?: string;
+  message?: string;
+  error?: string;
+  details?: string;
+}> {
+  return apiRequest("/api/test-blob-storage", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+/**
+ * Debug environment and package availability
+ */
+export async function debugEnvironment(): Promise<{
+  success: boolean;
+  python_version?: string;
+  blob_available?: boolean;
+  blob_version?: string;
+  has_blob_token?: boolean;
+  blob_token_length?: number;
+  vercel_env?: string;
+  relevant_env_vars?: Record<string, string>;
+  blob_related_packages?: string[];
+  error?: string;
+}> {
+  return apiRequest("/api/debug-environment", {
+    method: "GET",
+  });
+}
+
+/**
+ * Simple blob storage test
+ */
+export async function testBlobSimple(): Promise<{
+  success: boolean;
+  test_results?: unknown;
+  error?: string;
+}> {
+  return apiRequest("/api/test-blob-simple", {
+    method: "GET",
   });
 }

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AudioPlayerProps } from '@/types';
 import { downloadBlob } from '@/utils/audio';
+import { Card } from './ui/Card';
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   audioBlob,
@@ -70,14 +71,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
 
   if (!audioBlob) {
     return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-        <p className="text-gray-500">No audio available</p>
-      </div>
+      <Card className="text-center">
+        <p className="text-muted-foreground">No audio available</p>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
+    <Card variant="outlined">
       {audioUrl && (
         <audio
           ref={audioRef}
@@ -89,30 +90,30 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       )}
 
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+        <h3 className="text-lg font-semibold text-foreground mb-1">
           Your Motivational Song
         </h3>
-        <p className="text-sm text-gray-600">{filename}</p>
+        <p className="text-sm text-muted-foreground">{filename}</p>
       </div>
 
       <div className="space-y-4">
         <div className="flex items-center space-x-4">
           <button
             onClick={togglePlayPause}
-            className="flex items-center justify-center w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
+            className="flex items-center justify-center w-12 h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full transition-colors"
           >
             {isPlaying ? '⏸️' : '▶️'}
           </button>
 
           <div className="flex-1">
-            <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+            <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
             
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-progress-bg rounded-full h-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all"
+                className="bg-progress-fill h-2 rounded-full transition-all"
                 style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
               />
             </div>
@@ -122,7 +123,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <div className="flex space-x-3 pt-2">
           <button
             onClick={handleDownload}
-            className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
+            className="flex-1 bg-success hover:bg-success/90 text-success-foreground py-2 px-4 rounded-md font-medium transition-colors"
           >
             Download Song
           </button>
@@ -130,14 +131,14 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
           {onReset && (
             <button
               onClick={onReset}
-              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-md font-medium transition-colors"
+              className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground py-2 px-4 rounded-md font-medium transition-colors"
             >
               Create Another
             </button>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

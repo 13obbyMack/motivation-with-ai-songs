@@ -3,39 +3,28 @@
  */
 
 export const FILE_SIZE_LIMITS = {
-  // 10MB total limit for better user experience
-  MAX_TOTAL_SIZE: 10 * 1024 * 1024,
-  // Vercel's serverless function limit
-  VERCEL_LIMIT: 4.5 * 1024 * 1024,
+  // Removed size limits since we use blob storage
+  // Keep for reference but don't enforce
+  REFERENCE_VERCEL_LIMIT: 4.5 * 1024 * 1024,
 } as const;
 
 /**
- * Validates file size and returns appropriate error response data
+ * Validates file size - Now just logs for reference since we use blob storage
  */
 export function validateFileSize(
   size: number,
   filename?: string
 ): { isValid: boolean; error?: string; statusCode?: number } {
-  if (size > FILE_SIZE_LIMITS.MAX_TOTAL_SIZE) {
-    return {
-      isValid: false,
-      error: `File${filename ? ` "${filename}"` : ''} is too large (${(size / 1024 / 1024).toFixed(2)}MB). Maximum allowed size is 10MB.`,
-      statusCode: 413,
-    };
-  }
-
-  // Warn if approaching Vercel's limit but still allow processing
-  if (size > FILE_SIZE_LIMITS.VERCEL_LIMIT) {
-    console.warn(
-      `File${filename ? ` "${filename}"` : ''} size (${(size / 1024 / 1024).toFixed(2)}MB) exceeds Vercel's 4.5MB serverless limit. Processing may fail.`
-    );
-  }
+  // Since we use blob storage, we don't enforce size limits
+  // Just log for monitoring purposes
+  const sizeMB = (size / 1024 / 1024).toFixed(2);
+  console.log(`File${filename ? ` "${filename}"` : ''} size: ${sizeMB}MB (blob storage handles all sizes)`);
 
   return { isValid: true };
 }
 
 /**
- * Validates total payload size for multiple files
+ * Validates total payload size for multiple files - Now just logs since we use blob storage
  */
 export function validateTotalPayloadSize(
   sizes: number[]
@@ -96,7 +85,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
 /**
  * Validates API keys format and structure
  */
-export function validateAPIKeys(keys: { openaiKey: string; elevenlabsKey: string }): {
+export function validateAPIKeys(keys: { openaiKey: string; elevenlabsKey: string; youtubeCookies?: string }): {
   isValid: boolean;
   errors: string[];
 } {
@@ -110,6 +99,14 @@ export function validateAPIKeys(keys: { openaiKey: string; elevenlabsKey: string
 
   if (!keys.elevenlabsKey || keys.elevenlabsKey.trim().length === 0) {
     errors.push('ElevenLabs API key is required');
+  }
+
+  // Validate YouTube cookies format if provided
+  if (keys.youtubeCookies && keys.youtubeCookies.trim()) {
+    const cookiesContent = keys.youtubeCookies.trim();
+    if (!cookiesContent.includes('# HTTP Cookie File') && !cookiesContent.includes('# Netscape HTTP Cookie File')) {
+      errors.push('YouTube cookies must be in Netscape format (should start with "# HTTP Cookie File" or "# Netscape HTTP Cookie File")');
+    }
   }
 
   return {

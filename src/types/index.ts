@@ -17,6 +17,7 @@ export interface UserFormData {
 export interface APIKeys {
   openaiKey: string;
   elevenlabsKey: string;
+  youtubeCookies?: string;
 }
 
 // Processing Steps
