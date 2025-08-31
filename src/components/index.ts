@@ -4,6 +4,7 @@ export { default as UserInputForm } from './UserInputForm';
 export { VoiceSelector } from './VoiceSelector';
 export { default as AudioProcessor } from './AudioProcessor';
 export { default as AudioPlayer } from './AudioPlayer';
+export { default as AudioDebugger } from './AudioDebugger';
 export { default as MotivationalSongWorkflow } from './MotivationalSongWorkflow';
 export { default as Layout } from './Layout';
 export { default as ThemeToggle } from './ThemeToggle';

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { AudioProcessorProps, ProcessingStep } from '@/types';
 import { extractAudio, generateText, generateSpeech, spliceAudio } from '@/utils/api';
+import { validateAudioBlob } from '@/utils/audioValidation';
 import { Card } from './ui/Card';
 
 
@@ -190,14 +191,44 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
         throw new Error('No final audio data received from splicing');
       }
 
-      // Convert base64 to blob
-      const audioData = typeof spliceResponse.finalAudio === 'string' 
-        ? atob(spliceResponse.finalAudio)
-        : new Uint8Array(spliceResponse.finalAudio);
+      // Convert base64 to blob with proper binary handling
+      let audioBlob: Blob;
       
-      const audioBlob = typeof audioData === 'string'
-        ? new Blob([new Uint8Array([...audioData].map(c => c.charCodeAt(0)))], { type: 'audio/mpeg' })
-        : new Blob([audioData], { type: 'audio/mpeg' });
+      if (typeof spliceResponse.finalAudio === 'string') {
+        try {
+          // Proper base64 to binary conversion
+          const binaryString = atob(spliceResponse.finalAudio);
+          const bytes = new Uint8Array(binaryString.length);
+          
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+          console.log(`Created audio blob from base64: ${audioBlob.size} bytes`);
+        } catch (error) {
+          console.error('Failed to convert base64 to blob:', error);
+          throw new Error('Failed to process final audio data');
+        }
+      } else {
+        // Handle ArrayBuffer or Uint8Array
+        audioBlob = new Blob([spliceResponse.finalAudio], { type: 'audio/mpeg' });
+        console.log(`Created audio blob from binary data: ${audioBlob.size} bytes`);
+      }
+      
+      // Validate the audio blob before completing
+      console.log(`Validating final audio blob: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
+      
+      const validation = await validateAudioBlob(audioBlob);
+      if (!validation.isValid) {
+        throw new Error(`Audio validation failed: ${validation.error}`);
+      }
+      
+      if (validation.warnings && validation.warnings.length > 0) {
+        console.warn('Audio validation warnings:', validation.warnings);
+      }
+      
+      console.log('Audio blob validation passed:', validation.metadata);
       
       updateProgress(ProcessingStep.FINALIZING, 100);
 
