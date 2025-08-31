@@ -1,4 +1,4 @@
-yt-dlp==2025.08.11
+yt-dlp==2025.08.27
 openai==1.99.9
 requests==2.32.4
 vercel_blob==0.4.2
