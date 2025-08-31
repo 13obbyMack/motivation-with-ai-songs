@@ -1,14 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
-import { validateAudioBlob, testAudioPlayback } from '@/utils/audioValidation';
+import { validateAudioBlob, testAudioPlayback, AudioValidationResult } from '@/utils/audioValidation';
 
 interface AudioDebuggerProps {
   audioBlob: Blob;
 }
 
+interface DebugInfo {
+  validation?: AudioValidationResult;
+  playbackTest?: AudioValidationResult;
+  blobUrl?: string;
+  blobSize?: number;
+  blobType?: string;
+  timestamp?: string;
+  error?: string;
+}
+
 export const AudioDebugger: React.FC<AudioDebuggerProps> = ({ audioBlob }) => {
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
   const [isDebugging, setIsDebugging] = useState(false);
 
   const runDiagnostics = async () => {

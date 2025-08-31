@@ -53,7 +53,7 @@ export async function validateAudioBlob(blob: Blob): Promise<AudioValidationResu
         hasValidHeader = true;
       }
       // MPEG frame sync
-      else if (headerBytes[0] === 0xFF && (headerBytes[1] & 0xE0) === 0xE0) {
+      else if (headerBytes[0] === 0xFF && headerBytes[1] !== undefined && (headerBytes[1] & 0xE0) === 0xE0) {
         hasValidHeader = true;
       }
     }
@@ -75,7 +75,7 @@ export async function validateAudioBlob(blob: Blob): Promise<AudioValidationResu
       warnings.push('Audio file header not recognized - may not be a valid audio file');
     }
     
-  } catch (error) {
+  } catch {
     warnings.push('Could not read audio file header');
   }
   
@@ -132,7 +132,7 @@ export function testAudioPlayback(blob: Blob): Promise<AudioValidationResult> {
       }
     });
     
-    audio.addEventListener('error', (e) => {
+    audio.addEventListener('error', () => {
       clearTimeout(timeout);
       cleanup();
       
