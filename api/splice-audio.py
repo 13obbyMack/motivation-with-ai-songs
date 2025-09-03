@@ -84,6 +84,7 @@ class handler(BaseHTTPRequestHandler):
             splice_mode = data.get('spliceMode', 'intro')
             crossfade_duration = data.get('crossfadeDuration', 2.0)
             music_duration = data.get('musicDuration')
+            session_id = data.get('sessionId')
             
             # Check if we have either base64 data or blob URLs
             has_original = original_audio_b64 or original_audio_url
@@ -91,6 +92,10 @@ class handler(BaseHTTPRequestHandler):
             
             if not all([has_original, has_speech]):
                 self.send_error_response(400, 'Both original audio and speech audio are required (as base64 or blob URLs)')
+                return
+            
+            if not session_id:
+                self.send_error_response(400, 'Session ID is required')
                 return
             
             # Create temporary directory for processing
@@ -206,12 +211,13 @@ class handler(BaseHTTPRequestHandler):
                 # Upload to blob storage (ONLY method)
                 try:
                     print(f"Uploading {audio_size_mb:.2f}MB final audio to blob storage")
-                    blob_url = self._upload_to_blob_storage(final_audio_data)
+                    blob_url = self._upload_to_blob_storage(final_audio_data, session_id)
                     response_data = {
                         'finalAudioUrl': blob_url,
                         'success': True,
                         'deliveryMethod': 'blob',
-                        'audioSize': f'{audio_size_mb:.2f}MB'
+                        'audioSize': f'{audio_size_mb:.2f}MB',
+                        'sessionId': session_id
                     }
                     self.send_json_response(200, response_data)
                     return
@@ -725,8 +731,8 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             raise Exception(f"Failed to download from blob URL: {str(e)}")
     
-    def _upload_to_blob_storage(self, audio_content: bytes) -> str:
-        """Upload final audio content to Vercel Blob storage and return the URL"""
+    def _upload_to_blob_storage(self, audio_content: bytes, session_id: str) -> str:
+        """Upload final audio content to Vercel Blob storage with session-based folder structure"""
         
         if not BLOB_AVAILABLE:
             raise Exception("vercel_blob package not available")
@@ -738,12 +744,12 @@ class handler(BaseHTTPRequestHandler):
                 print("ERROR: BLOB_READ_WRITE_TOKEN environment variable is missing")
                 raise Exception("BLOB_READ_WRITE_TOKEN environment variable is required")
             
-            # Create a unique filename based on content hash and timestamp
+            # Create a unique filename with session-based folder structure
             content_hash = hashlib.sha256(audio_content).hexdigest()[:12]
             timestamp = int(time.time())
-            filename = f"final-audio/{timestamp}-{content_hash}.mp3"
+            filename = f"final-audio/{session_id}/final-{timestamp}-{content_hash}.mp3"
             
-            print(f"Uploading final audio to blob storage: {filename}")
+            print(f"Uploading final audio to session folder: {filename}")
             
             # Upload to Vercel Blob
             blob_result = vercel_blob.put(
@@ -755,7 +761,7 @@ class handler(BaseHTTPRequestHandler):
                 }
             )
             
-            print(f"✅ Final audio blob upload successful!")
+            print(f"✅ Final audio blob upload successful to session {session_id}!")
             
             # Extract URL from result
             if isinstance(blob_result, dict):

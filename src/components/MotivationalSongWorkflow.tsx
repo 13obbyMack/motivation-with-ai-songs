@@ -19,6 +19,7 @@ export const MotivationalSongWorkflow: React.FC<
   >("form");
   const [formData, setFormData] = useState<UserFormData | null>(null);
   const [finalAudio, setFinalAudio] = useState<Blob | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [, setProcessingProgress] =
     useState<ProcessingProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +30,9 @@ export const MotivationalSongWorkflow: React.FC<
     setError(null);
   };
 
-  const handleProcessingComplete = (audioBlob: Blob) => {
+  const handleProcessingComplete = (audioBlob: Blob, processingSessionId?: string) => {
     setFinalAudio(audioBlob);
+    setSessionId(processingSessionId || null);
     setCurrentStep("complete");
   };
 
@@ -47,6 +49,7 @@ export const MotivationalSongWorkflow: React.FC<
     setCurrentStep("form");
     setFormData(null);
     setFinalAudio(null);
+    setSessionId(null);
     setProcessingProgress(null);
     setError(null);
   };
@@ -193,6 +196,7 @@ export const MotivationalSongWorkflow: React.FC<
           <AudioPlayer
             audioBlob={finalAudio}
             filename={generateFilename()}
+            sessionId={sessionId || undefined}
             onDownload={() => {
               // Download is handled by AudioPlayer component
               console.log('Download completed');

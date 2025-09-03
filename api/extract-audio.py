@@ -250,9 +250,14 @@ class handler(BaseHTTPRequestHandler):
             
             youtube_url = data.get('youtubeUrl')
             cookies_content = data.get('youtubeCookies')
+            session_id = data.get('sessionId')
             
             if not youtube_url:
                 self.send_error_response(400, 'YouTube URL is required')
+                return
+            
+            if not session_id:
+                self.send_error_response(400, 'Session ID is required')
                 return
             
             # Validate URL
@@ -318,14 +323,15 @@ class handler(BaseHTTPRequestHandler):
                 # Upload to blob storage (ONLY method)
                 try:
                     print(f"Uploading {audio_size_mb:.2f}MB YouTube audio to blob storage")
-                    blob_url = self._upload_to_blob_storage(audio_data, video_info['title'])
+                    blob_url = self._upload_to_blob_storage(audio_data, video_info['title'], session_id)
                     response = {
                         'audioUrl': blob_url,
                         'duration': video_info['duration'],
                         'title': video_info['title'],
                         'success': True,
                         'deliveryMethod': 'blob',
-                        'audioSize': f'{audio_size_mb:.2f}MB'
+                        'audioSize': f'{audio_size_mb:.2f}MB',
+                        'sessionId': session_id
                     }
                     self.send_json_response(200, response)
                     return
@@ -347,8 +353,8 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error_response(500, f'An unexpected error occurred: {str(e)}')
     
-    def _upload_to_blob_storage(self, audio_content: bytes, title: str) -> str:
-        """Upload audio content to Vercel Blob storage and return the URL"""
+    def _upload_to_blob_storage(self, audio_content: bytes, title: str, session_id: str) -> str:
+        """Upload audio content to Vercel Blob storage with session-based folder structure"""
         
         if not BLOB_AVAILABLE:
             raise Exception("vercel_blob package not available")
@@ -360,14 +366,14 @@ class handler(BaseHTTPRequestHandler):
                 print("ERROR: BLOB_READ_WRITE_TOKEN environment variable is missing")
                 raise Exception("BLOB_READ_WRITE_TOKEN environment variable is required")
             
-            # Create a unique filename based on content hash and timestamp
+            # Create a unique filename with session-based folder structure
             content_hash = hashlib.sha256(audio_content).hexdigest()[:12]
             timestamp = int(time.time())
             # Sanitize title for filename
             safe_title = re.sub(r'[^\w\-_\.]', '_', title)[:50]
-            filename = f"youtube-audio/{safe_title}/{timestamp}-{content_hash}.mp3"
+            filename = f"youtube-audio/{session_id}/{safe_title}-{timestamp}-{content_hash}.mp3"
             
-            print(f"Uploading YouTube audio to blob storage: {filename}")
+            print(f"Uploading YouTube audio to session folder: {filename}")
             
             # Upload to Vercel Blob
             blob_result = vercel_blob.put(
@@ -379,7 +385,7 @@ class handler(BaseHTTPRequestHandler):
                 }
             )
             
-            print(f"✅ YouTube audio blob upload successful!")
+            print(f"✅ YouTube audio blob upload successful to session {session_id}!")
             
             # Extract URL from result
             if isinstance(blob_result, dict):

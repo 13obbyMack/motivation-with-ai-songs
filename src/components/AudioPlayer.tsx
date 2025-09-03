@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AudioPlayerProps } from '@/types';
 import { downloadBlob } from '@/utils/audio';
+import { scheduleCleanup } from '@/utils/cleanup';
 import { Card } from './ui/Card';
 import AudioDebugger from './AudioDebugger';
 
@@ -11,6 +12,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   filename,
   onDownload,
   onReset,
+  sessionId,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -278,6 +280,12 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     if (audioBlob) {
       downloadBlob(audioBlob, filename);
       onDownload();
+      
+      // Schedule cleanup of session files after successful download
+      if (sessionId) {
+        console.log(`🧹 Scheduling cleanup for session: ${sessionId}`);
+        scheduleCleanup(sessionId, 3000); // Clean up after 3 seconds
+      }
     }
   };
 

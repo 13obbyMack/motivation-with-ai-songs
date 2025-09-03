@@ -80,6 +80,7 @@ class handler(BaseHTTPRequestHandler):
             settings = data.get('settings', {})
             model_id = data.get('modelId', 'eleven_multilingual_v2')
             output_format = data.get('outputFormat', 'mp3_44100_128')
+            session_id = data.get('sessionId')
             
             # Detailed validation with specific error messages
             if not api_key:
@@ -101,6 +102,10 @@ class handler(BaseHTTPRequestHandler):
                 return
             if not isinstance(voice_id, str) or len(voice_id.strip()) == 0:
                 self.send_error_response(400, 'Voice ID must be a non-empty string')
+                return
+            
+            if not session_id:
+                self.send_error_response(400, 'Session ID is required')
                 return
             
             # Validate model_id
@@ -197,13 +202,14 @@ class handler(BaseHTTPRequestHandler):
                 
                 # Upload to blob storage (ONLY method)
                 try:
-                    blob_url = self._upload_to_blob_storage(response.content, voice_id, text)
+                    blob_url = self._upload_to_blob_storage(response.content, voice_id, text, session_id)
                     response_data = {
                         'audioUrl': blob_url,
                         'success': True,
                         'deliveryMethod': 'blob',
                         'audioSize': f'{audio_size_mb:.2f}MB',
-                        'expiresIn': '24 hours'
+                        'expiresIn': '24 hours',
+                        'sessionId': session_id
                     }
                     self.send_json_response(200, response_data)
                     return
@@ -234,10 +240,10 @@ class handler(BaseHTTPRequestHandler):
             error_type = type(e).__name__
             self.send_error_response(500, f'Internal server error ({error_type}). Please try again')
     
-    def _upload_to_blob_storage(self, audio_content: bytes, voice_id: str, text: str) -> str:
-        """Upload audio content to Vercel Blob storage and return the URL"""
+    def _upload_to_blob_storage(self, audio_content: bytes, voice_id: str, text: str, session_id: str) -> str:
+        """Upload audio content to Vercel Blob storage with session-based folder structure"""
         
-        print(f"🔍 _upload_to_blob_storage called")
+        print(f"🔍 _upload_to_blob_storage called for session: {session_id}")
         print(f"🔍 BLOB_AVAILABLE: {BLOB_AVAILABLE}")
         print(f"🔍 vercel_blob: {vercel_blob}")
         
@@ -254,12 +260,12 @@ class handler(BaseHTTPRequestHandler):
             
             print(f"✅ Found blob token: {blob_token[:10]}...")
             
-            # Create a unique filename based on content hash and timestamp
+            # Create a unique filename with session-based folder structure
             content_hash = hashlib.sha256(audio_content).hexdigest()[:12]
             timestamp = int(time.time())
-            filename = f"tts-audio/{voice_id}/{timestamp}-{content_hash}.mp3"
+            filename = f"tts-audio/{session_id}/{voice_id}-{timestamp}-{content_hash}.mp3"
             
-            print(f"📁 Uploading to blob storage: {filename}")
+            print(f"📁 Uploading to session folder: {filename}")
             print(f"📊 File size: {len(audio_content):,} bytes ({len(audio_content)/(1024*1024):.2f}MB)")
             
             # Check if vercel_blob has the put function
@@ -281,7 +287,7 @@ class handler(BaseHTTPRequestHandler):
                 }
             )
             
-            print(f"✅ Blob upload completed!")
+            print(f"✅ Blob upload completed to session {session_id}!")
             print(f"📋 Result type: {type(blob_result)}")
             print(f"📋 Result: {blob_result}")
             

@@ -47,14 +47,17 @@ export interface ElevenLabsVoice {
 // API Request/Response Types
 export interface ExtractAudioRequest {
   youtubeUrl: string;
+  sessionId: string;
 }
 
 export interface ExtractAudioResponse {
   audioData: string; // Base64 encoded audio data
+  audioUrl?: string; // Blob URL for large files
   duration: number;
   title: string;
   success: boolean;
   error?: string;
+  sessionId?: string;
 }
 
 export interface GenerateTextRequest {
@@ -86,27 +89,35 @@ export interface GenerateSpeechRequest {
   settings?: TTSSettings;
   modelId?: string;
   outputFormat?: string;
+  sessionId: string;
 }
 
 export interface GenerateSpeechResponse {
-  audioData: string; // Base64 encoded audio data
+  audioData?: string; // Base64 encoded audio data (for small files)
+  audioUrl?: string; // Blob URL for large files
   success: boolean;
   error?: string;
+  sessionId?: string;
 }
 
 export interface SpliceAudioRequest {
-  originalAudio: string; // Base64 encoded audio data
-  speechAudio: string | string[]; // Base64 encoded audio data
+  originalAudio?: string; // Base64 encoded audio data
+  originalAudioUrl?: string; // Blob URL for large files
+  speechAudio?: string | string[]; // Base64 encoded audio data
+  speechAudioUrls?: string[]; // Blob URLs for large files
   spliceMode: SpliceMode;
   crossfadeDuration?: number;
   musicDuration?: number;
+  sessionId: string;
 }
 
 export interface SpliceAudioResponse {
-  finalAudio: ArrayBuffer | string;
-  blobUrl?: string; // For large files processed via blob storage
+  finalAudio?: ArrayBuffer | string;
+  finalAudioUrl?: string; // Blob URL for large files
+  blobUrl?: string; // For backward compatibility
   success: boolean;
   error?: string;
+  sessionId?: string;
 }
 
 // Supporting Types
@@ -171,7 +182,7 @@ export interface AudioProcessorProps {
   formData: UserFormData;
   apiKeys: APIKeys;
   selectedVoiceId: string;
-  onProcessingComplete: (audioBlob: Blob) => void;
+  onProcessingComplete: (audioBlob: Blob, sessionId?: string) => void;
   onProgressUpdate: (progress: ProcessingProgress) => void;
   onError: (error: string) => void;
 }
@@ -181,4 +192,5 @@ export interface AudioPlayerProps {
   filename: string;
   onDownload: () => void;
   onReset?: () => void;
+  sessionId?: string;
 }

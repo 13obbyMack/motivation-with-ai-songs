@@ -44,7 +44,7 @@ async function apiRequest<T>(
 /**
  * Extract audio from YouTube URL
  */
-export async function extractAudio(youtubeUrl: string, youtubeCookies?: string): Promise<{
+export async function extractAudio(youtubeUrl: string, youtubeCookies?: string, sessionId?: string): Promise<{
   audioData?: string;
   audioUrl?: string;
   duration: number;
@@ -53,6 +53,7 @@ export async function extractAudio(youtubeUrl: string, youtubeCookies?: string):
   error?: string;
   deliveryMethod?: string;
   audioSize?: string;
+  sessionId?: string;
 }> {
   const response = await apiRequest<{
     audioUrl?: string;
@@ -62,9 +63,10 @@ export async function extractAudio(youtubeUrl: string, youtubeCookies?: string):
     error?: string;
     deliveryMethod?: string;
     audioSize?: string;
+    sessionId?: string;
   }>("/api/extract-audio", {
     method: "POST",
-    body: JSON.stringify({ youtubeUrl, youtubeCookies }),
+    body: JSON.stringify({ youtubeUrl, youtubeCookies, sessionId }),
   });
 
   // All responses should be blob URLs now
@@ -164,6 +166,7 @@ export async function generateSpeech(
   voiceId: string,
   settings?: unknown,
   modelId?: string,
+  sessionId?: string,
   outputFormat?: string
 ): Promise<{
   audioData?: string;
@@ -172,6 +175,7 @@ export async function generateSpeech(
   audioSize?: string;
   success: boolean;
   error?: string;
+  sessionId?: string;
 }> {
   const response = await apiRequest<{
     audioUrl?: string;
@@ -179,6 +183,7 @@ export async function generateSpeech(
     audioSize?: string;
     success: boolean;
     error?: string;
+    sessionId?: string;
   }>("/api/generate-speech", {
     method: "POST",
     body: JSON.stringify({
@@ -188,6 +193,7 @@ export async function generateSpeech(
       settings,
       modelId,
       outputFormat,
+      sessionId,
     }),
   });
 
@@ -254,7 +260,8 @@ export async function spliceAudio(
   speechAudio: string | string[],
   spliceMode: "intro" | "random" | "distributed" = "intro",
   crossfadeDuration?: number,
-  musicDuration?: number
+  musicDuration?: number,
+  sessionId?: string
 ): Promise<{
   finalAudio?: string;
   finalAudioUrl?: string;
@@ -262,6 +269,7 @@ export async function spliceAudio(
   error?: string;
   deliveryMethod?: string;
   audioSize?: string;
+  sessionId?: string;
 }> {
   // Determine if originalAudio is a blob URL or base64
   const isOriginalBlobUrl = originalAudio.startsWith('http');
@@ -278,10 +286,12 @@ export async function spliceAudio(
     originalAudioUrl?: string;
     speechAudio?: string | string[];
     speechAudioUrls?: string[];
+    sessionId?: string;
   } = {
     spliceMode,
     crossfadeDuration,
     musicDuration,
+    sessionId,
   };
   
   // Send blob URL or base64 data accordingly for original audio
@@ -308,6 +318,7 @@ export async function spliceAudio(
     error?: string;
     deliveryMethod?: string;
     audioSize?: string;
+    sessionId?: string;
   }>("/api/splice-audio", {
     method: "POST",
     body: JSON.stringify(requestBody),

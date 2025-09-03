@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AudioProcessorProps, ProcessingStep } from '@/types';
 import { extractAudio, generateText, generateSpeech, spliceAudio } from '@/utils/api';
 import { validateAudioBlob } from '@/utils/audioValidation';
 import { createSeekableAudioBlob } from '@/utils/audioOptimization';
+import { createSession } from '@/utils/session';
 import { Card } from './ui/Card';
 
 
@@ -27,11 +28,19 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<ProcessingStep | null>(null);
   const [progress, setProgress] = useState(0);
+  const [sessionId, setSessionId] = useState<string>('');
   const [blobStorageStatus, setBlobStorageStatus] = useState<{
     checked: boolean;
     available: boolean;
     error?: string;
   }>({ checked: false, available: false });
+
+  // Create session on component mount
+  useEffect(() => {
+    const session = createSession();
+    setSessionId(session.sessionId);
+    console.log(`🎯 Created processing session: ${session.sessionId}`);
+  }, []);
 
   const updateProgress = (step: ProcessingStep, stepProgress: number) => {
     const stepIndex = Object.values(ProcessingStep).indexOf(step);
@@ -74,7 +83,7 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
       setCurrentStep(ProcessingStep.DOWNLOADING_AUDIO);
       updateProgress(ProcessingStep.DOWNLOADING_AUDIO, 0);
       
-      const audioResponse = await extractAudio(formData.youtubeUrl, apiKeys.youtubeCookies);
+      const audioResponse = await extractAudio(formData.youtubeUrl, apiKeys.youtubeCookies, sessionId);
       if (!audioResponse.success) {
         throw new Error(audioResponse.error || 'Failed to extract audio');
       }
@@ -111,7 +120,8 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
           chunk, 
           selectedVoiceId,
           undefined, // settings
-          formData.selectedModelId // use selected model
+          formData.selectedModelId, // use selected model
+          sessionId
         );
         
         if (!speechResponse.success) {
@@ -174,7 +184,9 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
         originalAudioInput,
         speechInput,
         'distributed', // Use distributed mode for better integration
-        audioResponse.duration
+        undefined, // crossfadeDuration
+        audioResponse.duration, // musicDuration
+        sessionId
       );
       if (!spliceResponse.success) {
         throw new Error(spliceResponse.error || 'Failed to splice audio');
@@ -235,7 +247,9 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
 
       setIsProcessing(false);
       setCurrentStep(null);
-      onProcessingComplete(audioBlob);
+      
+      // Pass both the audio blob and session ID for cleanup after download
+      onProcessingComplete(audioBlob, sessionId);
 
     } catch (error) {
       console.error('Processing error:', error);
