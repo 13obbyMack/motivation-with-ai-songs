@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { validateAudioBlob, testAudioPlayback, AudioValidationResult } from '@/utils/audioValidation';
+import { testSeekingCapability } from '@/utils/audioOptimization';
 
 interface AudioDebuggerProps {
   audioBlob: Blob;
@@ -10,6 +11,12 @@ interface AudioDebuggerProps {
 interface DebugInfo {
   validation?: AudioValidationResult;
   playbackTest?: AudioValidationResult;
+  seekingTest?: {
+    canSeek: boolean;
+    seekableRanges: number;
+    duration: number;
+    error?: string;
+  };
   blobUrl?: string;
   blobSize?: number;
   blobType?: string;
@@ -33,12 +40,16 @@ export const AudioDebugger: React.FC<AudioDebuggerProps> = ({ audioBlob }) => {
       // Playback test
       const playbackTest = await testAudioPlayback(audioBlob);
       
+      // Seeking capability test
+      const seekingTest = await testSeekingCapability(audioBlob);
+      
       // Create object URL and test
       const url = URL.createObjectURL(audioBlob);
       
       setDebugInfo({
         validation,
         playbackTest,
+        seekingTest,
         blobUrl: url,
         blobSize: audioBlob.size,
         blobType: audioBlob.type,

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AudioProcessorProps, ProcessingStep } from '@/types';
 import { extractAudio, generateText, generateSpeech, spliceAudio } from '@/utils/api';
 import { validateAudioBlob } from '@/utils/audioValidation';
+import { createSeekableAudioBlob } from '@/utils/audioOptimization';
 import { Card } from './ui/Card';
 
 
@@ -204,16 +205,16 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
             bytes[i] = binaryString.charCodeAt(i);
           }
           
-          audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-          console.log(`Created audio blob from base64: ${audioBlob.size} bytes`);
+          audioBlob = createSeekableAudioBlob(bytes, 'audio/mpeg');
+          console.log(`Created seekable audio blob from base64: ${audioBlob.size} bytes`);
         } catch (error) {
           console.error('Failed to convert base64 to blob:', error);
           throw new Error('Failed to process final audio data');
         }
       } else {
         // Handle ArrayBuffer or Uint8Array
-        audioBlob = new Blob([spliceResponse.finalAudio], { type: 'audio/mpeg' });
-        console.log(`Created audio blob from binary data: ${audioBlob.size} bytes`);
+        audioBlob = createSeekableAudioBlob(spliceResponse.finalAudio, 'audio/mpeg');
+        console.log(`Created seekable audio blob from binary data: ${audioBlob.size} bytes`);
       }
       
       // Validate the audio blob before completing
