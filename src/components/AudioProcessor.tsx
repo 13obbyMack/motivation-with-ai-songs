@@ -6,6 +6,7 @@ import { extractAudio, generateText, generateSpeech, spliceAudio } from '@/utils
 import { validateAudioBlob } from '@/utils/audioValidation';
 import { createSeekableAudioBlob } from '@/utils/audioOptimization';
 import { createSession } from '@/utils/session';
+import { getTTSSettings } from '@/utils/elevenlabs';
 import { Card } from './ui/Card';
 
 
@@ -119,7 +120,7 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
           apiKeys.elevenlabsKey, 
           chunk, 
           selectedVoiceId,
-          undefined, // settings
+          getTTSSettings(formData.selectedModelId), // use model-specific settings
           formData.selectedModelId, // use selected model
           sessionId
         );

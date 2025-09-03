@@ -19,6 +19,17 @@ export function selectOptimalModel(
 
 // Baseline TTS settings with dynamic configuration based on model
 export function getBaselineTTSSettings(modelId: ElevenLabsModel): TTSSettings {
+  // Model-specific settings based on API requirements
+  if (modelId === "eleven_v3") {
+    // v3 model requires specific stability values: 0.0, 0.5, or 1.0
+    return {
+      stability: 0.0, // Creative mode for expressive motivational content
+      similarity_boost: 0.85, // Higher for voice authenticity
+      style: 0.0, // Available for v3
+      use_speaker_boost: true, // Enhanced clarity
+    };
+  }
+
   const baseSettings: TTSSettings = {
     stability: 0.3, // Less consistent but more dynamic range
     similarity_boost: 0.85, // Higher for voice authenticity

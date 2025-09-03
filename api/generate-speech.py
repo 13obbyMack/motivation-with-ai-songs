@@ -33,6 +33,27 @@ MOTIVATIONAL_TTS_SETTINGS = {
     'use_speaker_boost': True
 }
 
+# Model-specific TTS settings
+def get_model_specific_settings(model_id: str, base_settings: dict) -> dict:
+    """Get model-specific TTS settings with proper validation"""
+    settings = base_settings.copy()
+    
+    # ElevenLabs v3 model requires specific stability values: 0.0, 0.5, or 1.0
+    if model_id == 'eleven_v3':
+        # Map any stability value to the nearest valid v3 value
+        current_stability = settings.get('stability', 0.3)
+        if current_stability <= 0.25:
+            settings['stability'] = 0.0  # Creative
+        elif current_stability <= 0.75:
+            settings['stability'] = 0.5  # Natural
+        else:
+            settings['stability'] = 1.0  # Robust
+        
+        # For motivational content, use Creative mode (0.0) for maximum expressiveness
+        settings['stability'] = 0.0
+    
+    return settings
+
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(200)
@@ -125,8 +146,13 @@ class handler(BaseHTTPRequestHandler):
             # Note: ElevenLabs model limits are handled by the frontend chunking system
             # We don't enforce limits here since blob storage handles any audio size
             
-            # Merge settings with defaults
-            tts_settings = {**MOTIVATIONAL_TTS_SETTINGS, **settings}
+            # Merge settings with defaults and apply model-specific adjustments
+            merged_settings = {**MOTIVATIONAL_TTS_SETTINGS, **settings}
+            tts_settings = get_model_specific_settings(model_id, merged_settings)
+            
+            # Log the final settings for debugging
+            print(f"Using model: {model_id}")
+            print(f"Final TTS settings: {tts_settings}")
             
             # Make request to ElevenLabs
             headers = {
