@@ -29,8 +29,8 @@ def validate_youtube_url(url: str) -> bool:
     """Validate YouTube URL format"""
     return bool(YOUTUBE_URL_REGEX.match(url.strip()))
 
-def get_video_info(url: str, cookies_content: str = None) -> dict:
-    """Extract video information using yt-dlp with optional cookies support"""
+def download_youtube_audio(url: str, output_path: str, cookies_content: str = None) -> dict:
+    """Download audio from YouTube using yt-dlp with optional cookies support"""
     
     # Create temporary cookies file if cookies provided
     cookies_file = None
@@ -53,123 +53,83 @@ def get_video_info(url: str, cookies_content: str = None) -> dict:
                     pass
             raise Exception(f"Invalid cookies format: {str(e)}")
     
-    # Strategy 1: High-quality MP3 with cookies (if provided) - No FFmpeg post-processing
-    ydl_opts_cookies = {
-        'format': 'bestaudio[abr>=192][ext=mp3]/bestaudio[abr>=128][ext=mp3]/bestaudio[ext=mp3]/bestaudio[abr>=192]/bestaudio[ext=m4a]/bestaudio/best',
+    # Base options for all strategies
+    base_opts = {
+        'outtmpl': output_path,
         'noplaylist': True,
-        'quiet': True,
-        'no_warnings': True,
-        'cookiefile': cookies_file.name if cookies_file else None,
+        'quiet': False,
+        'no_warnings': False,
+        'extract_flat': False,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
     }
     
-    # Strategy 2: High-quality MP3 standard configuration - No FFmpeg post-processing
-    ydl_opts_standard = {
-        'format': 'bestaudio[abr>=192][ext=mp3]/bestaudio[abr>=128][ext=mp3]/bestaudio[ext=mp3]/bestaudio[abr>=192]/bestaudio[ext=m4a]/bestaudio',
-        'noplaylist': True,
-        'quiet': True,
-        'no_warnings': True,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
+    # Strategy 1: Best audio quality with cookies (if provided)
+    ydl_opts_cookies = {
+        **base_opts,
+        'format': 'bestaudio/best',
+        'cookiefile': cookies_file.name if cookies_file else None,
     }
     
-    # Strategy 3: Minimal configuration (fallback) - No FFmpeg post-processing
+    # Strategy 2: Best audio quality standard configuration
+    ydl_opts_standard = {
+        **base_opts,
+        'format': 'bestaudio/best',
+    }
+    
+    # Strategy 3: Minimal configuration (fallback)
     ydl_opts_minimal = {
-        'format': 'bestaudio[ext=mp3]/bestaudio[ext=m4a]/bestaudio/worst',
-        'noplaylist': True,
-        'quiet': True,
-        'no_warnings': True,
+        **base_opts,
+        'format': 'worst',
         'ignore_errors': True,
     }
     
-    # Build strategies list - prioritize high-quality MP3
+    # Build strategies list
     strategies = []
     if cookies_file:
-        strategies.append(("cookies_hq_mp3", ydl_opts_cookies))
+        strategies.append(("cookies_best_audio", ydl_opts_cookies))
     strategies.extend([
-        ("standard_hq_mp3", ydl_opts_standard),
-        ("minimal_mp3", ydl_opts_minimal)
+        ("standard_best_audio", ydl_opts_standard),
+        ("minimal_fallback", ydl_opts_minimal)
     ])
     
     last_error = None
+    video_info = None
     
     for strategy_name, ydl_opts in strategies:
         try:
-            print(f"Trying strategy: {strategy_name}")
+            print(f"Trying download strategy: {strategy_name}")
             
             # Add delay between strategies
-            if strategy_name != "minimal_mp3":
-                time.sleep(random.uniform(2, 4))
+            if strategy_name != "minimal_fallback":
+                time.sleep(random.uniform(1, 2))
                 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
+                # Download the audio file directly
+                info = ydl.extract_info(url, download=True)
                 
-                # Find the best available audio format, preferring MP3 and high bitrate
-                audio_url = None
-                selected_format = None
-                
-                if 'formats' in info and info['formats']:
-                    print(f"Found {len(info['formats'])} formats to analyze")
+                if info and os.path.exists(output_path):
+                    file_size = os.path.getsize(output_path)
+                    size_mb = file_size / (1024 * 1024)
                     
-                    # Sort formats by preference: MP3 first, then by bitrate
-                    audio_formats = []
-                    for fmt in info['formats']:
-                        if fmt.get('acodec') and fmt.get('acodec') != 'none' and fmt.get('url'):
-                            audio_formats.append(fmt)
+                    print(f"✅ Successfully downloaded audio:")
+                    print(f"   Strategy: {strategy_name}")
+                    print(f"   File size: {size_mb:.2f}MB")
+                    print(f"   Duration: {info.get('duration', 0)}s")
                     
-                    print(f"Found {len(audio_formats)} audio formats")
-                    
-                    # Prioritize formats: MP3 with high bitrate first
-                    def format_priority(fmt):
-                        ext = fmt.get('ext', '')
-                        abr = fmt.get('abr', 0) or 0
-                        
-                        # MP3 gets highest priority
-                        if ext == 'mp3':
-                            return (3, abr)  # High priority, then by bitrate
-                        # M4A gets medium priority
-                        elif ext == 'm4a':
-                            return (2, abr)
-                        # Other audio formats get lower priority
-                        else:
-                            return (1, abr)
-                    
-                    # Sort by priority (descending)
-                    audio_formats.sort(key=format_priority, reverse=True)
-                    
-                    # Select the best format
-                    if audio_formats:
-                        selected_format = audio_formats[0]
-                        audio_url = selected_format.get('url')
-                        
-                        ext = selected_format.get('ext', 'unknown')
-                        abr = selected_format.get('abr', 'unknown')
-                        acodec = selected_format.get('acodec', 'unknown')
-                        
-                        print(f"✅ Selected best audio format:")
-                        print(f"   Format: {ext}")
-                        print(f"   Bitrate: {abr}kbps")
-                        print(f"   Codec: {acodec}")
-                        print(f"   Strategy: {strategy_name}")
-                
-                # Final fallback to direct URL
-                if not audio_url and info.get('url'):
-                    audio_url = info['url']
-                    print("⚠️ Using direct URL fallback")
-                    
-                if audio_url:
-                    return {
+                    video_info = {
                         'title': info.get('title', 'Unknown Title'),
                         'duration': info.get('duration', 0),
-                        'audio_url': audio_url
+                        'file_path': output_path,
+                        'file_size': file_size
                     }
+                    break
                     
         except Exception as e:
             last_error = e
             error_msg = str(e).lower()
+            print(f"⚠️ Strategy {strategy_name} failed: {str(e)}")
             
             # If it's a JSON parsing error or player response error, try next strategy
             if any(phrase in error_msg for phrase in ['json', 'player response', 'initial data']):
@@ -187,6 +147,10 @@ def get_video_info(url: str, cookies_content: str = None) -> dict:
             os.unlink(cookies_file.name)
         except:
             pass
+    
+    # Check if download succeeded
+    if video_info:
+        return video_info
     
     # All strategies failed
     if last_error:
@@ -210,28 +174,7 @@ def get_video_info(url: str, cookies_content: str = None) -> dict:
             else:
                 raise Exception(f"YouTube extraction failed even with cookies. Error: {str(last_error)}")
     else:
-        raise Exception("Failed to extract video information using all available methods.")
-
-def download_audio(audio_url: str) -> bytes:
-    """Download audio from URL"""
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.youtube.com/'
-    }
-    
-    try:
-        response = requests.get(audio_url, headers=headers, timeout=120)
-        response.raise_for_status()
-        
-        # Log file size for debugging (no limit since we use blob storage)
-        content_length = response.headers.get('content-length')
-        if content_length:
-            size_mb = int(content_length) / (1024 * 1024)
-            print(f"Downloading YouTube audio: {size_mb:.2f}MB")
-        
-        return response.content
-    except requests.RequestException as e:
-        raise Exception(f"Failed to download audio: {str(e)}")
+        raise Exception("Failed to download audio using all available methods.")
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -265,9 +208,31 @@ class handler(BaseHTTPRequestHandler):
                 self.send_error_response(400, 'Please provide a valid YouTube URL')
                 return
             
-            # Get video info
+            # Download audio using yt-dlp
             try:
-                video_info = get_video_info(youtube_url, cookies_content)
+                # Create temp file for download
+                with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+                    temp_audio_path = temp_file.name
+                
+                video_info = download_youtube_audio(youtube_url, temp_audio_path, cookies_content)
+                
+                # Read the downloaded file
+                with open(temp_audio_path, 'rb') as f:
+                    audio_data = f.read()
+                
+                # Clean up temp file
+                try:
+                    os.unlink(temp_audio_path)
+                except:
+                    pass
+                
+                audio_size_mb = len(audio_data) / (1024 * 1024)
+                duration_minutes = video_info['duration'] / 60
+                
+                print(f"✅ YouTube audio downloaded successfully:")
+                print(f"   Duration: {duration_minutes:.1f} minutes")
+                print(f"   Size: {audio_size_mb:.2f}MB")
+                
             except Exception as e:
                 error_msg = str(e)
                 
@@ -292,21 +257,8 @@ class handler(BaseHTTPRequestHandler):
                     self.send_error_response(400, f'Failed to process video: {error_msg}')
                     return
             
-            # Log duration for monitoring (no limits since we use blob storage)
-            duration_minutes = video_info['duration'] / 60
-            print(f"YouTube video duration: {duration_minutes:.1f} minutes")
-            
-            # Note: Blob storage can handle audio files of any length
-            
-            # Download audio
-            if not video_info['audio_url']:
-                self.send_error_response(400, 'No audio stream available for this video')
-                return
-            
+            # Upload to blob storage
             try:
-                audio_data = download_audio(video_info['audio_url'])
-                audio_size_mb = len(audio_data) / (1024 * 1024)
-                print(f"Downloaded YouTube audio: {audio_size_mb:.2f}MB")
                 
                 # BLOB STORAGE ONLY - No fallback logic
                 print(f"YouTube audio extracted: {audio_size_mb:.2f}MB")
