@@ -153,7 +153,7 @@ class handler(BaseHTTPRequestHandler):
                 # For backward compatibility, create a combined speech file for duration calculation
                 if has_multiple_chunks:
                     combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
-                    self.concatenate_audio_files(speech_paths, combined_speech_path)
+                    self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
                     speech_duration = self.get_audio_duration(combined_speech_path)
                 else:
                     speech_duration = self.get_audio_duration(speech_paths[0])
@@ -171,7 +171,7 @@ class handler(BaseHTTPRequestHandler):
                         # For intro mode, concatenate chunks first then add to beginning
                         if has_multiple_chunks:
                             combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
-                            self.concatenate_audio_files(speech_paths, combined_speech_path)
+                            self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
                             self.splice_intro(combined_speech_path, original_path, output_path)
                         else:
                             self.splice_intro(speech_paths[0], original_path, output_path)
@@ -189,7 +189,7 @@ class handler(BaseHTTPRequestHandler):
                     # Fallback: simple concatenation of all speech + music
                     if has_multiple_chunks:
                         combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
-                        self.concatenate_audio_files(speech_paths, combined_speech_path)
+                        self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
                         self.splice_simple_concat(combined_speech_path, original_path, output_path)
                     else:
                         self.splice_simple_concat(speech_paths[0], original_path, output_path)
@@ -246,7 +246,7 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error_response(500, f'Audio splicing error: {str(e)}')
     
-    def concatenate_audio_files(self, input_paths, output_path):
+    def concatenate_audio_files(self, input_paths, output_path, temp_dir=None):
         """Concatenate audio files using PyAV (simplified binary approach)"""
         if not PYAV_AVAILABLE:
             raise Exception("PyAV not available - cannot perform audio concatenation")
@@ -254,12 +254,16 @@ class handler(BaseHTTPRequestHandler):
         try:
             print(f"Concatenating {len(input_paths)} audio files using PyAV (binary method)")
             
+            # Use temp_dir if provided, otherwise use directory of output_path
+            if temp_dir is None:
+                temp_dir = os.path.dirname(output_path) or '.'
+            
             # Simple approach: use PyAV to convert each file to a standard format, then concatenate
             temp_files = []
             
             # Convert each input to a standard format
             for i, input_path in enumerate(input_paths):
-                temp_path = f"temp_audio_{i}.mp3"
+                temp_path = os.path.join(temp_dir, f"temp_audio_{i}.mp3")
                 temp_files.append(temp_path)
                 
                 print(f"Converting speech chunk {i+1} to standard format")
@@ -334,43 +338,53 @@ class handler(BaseHTTPRequestHandler):
 
     
     def get_audio_duration(self, audio_path):
-        """Get audio duration using PyAV"""
+        """Get audio duration using PyAV with robust fallback mechanisms"""
         if not PYAV_AVAILABLE:
             raise Exception("PyAV not available - cannot get audio duration")
-            
+        
+        # Try multiple methods to get duration, with fallbacks
+        
+        # Method 1: Try container duration
         try:
             container = av.open(audio_path)
-            # Fix: Handle None duration properly
-            if container.duration is None:
-                print("Container duration is None, calculating from streams...")
-                # Try to get duration from audio stream
-                audio_stream = container.streams.audio[0]
-                if audio_stream.duration is not None:
-                    duration_seconds = float(audio_stream.duration * audio_stream.time_base)
-                else:
-                    # Fallback: decode frames to calculate duration
-                    frame_count = 0
-                    for frame in container.decode(audio_stream):
-                        frame_count += 1
-                    duration_seconds = frame_count * audio_stream.time_base * audio_stream.codec_context.frame_size
-            else:
+            if container.duration is not None and container.duration > 0:
                 duration_seconds = float(container.duration) / av.time_base
+                container.close()
+                print(f"Audio duration (container): {duration_seconds:.2f} seconds")
+                return duration_seconds
+            
+            # Method 2: Try stream duration
+            if len(container.streams.audio) > 0:
+                audio_stream = container.streams.audio[0]
+                if audio_stream.duration is not None and audio_stream.duration > 0:
+                    duration_seconds = float(audio_stream.duration * audio_stream.time_base)
+                    container.close()
+                    print(f"Audio duration (stream): {duration_seconds:.2f} seconds")
+                    return duration_seconds
             
             container.close()
-            print(f"Audio duration (PyAV): {duration_seconds:.2f} seconds")
-            return duration_seconds
+            print("⚠️ Container and stream duration unavailable, using file size estimation")
+            
         except Exception as e:
-            print(f"❌ Failed to get duration with PyAV: {str(e)}")
-            # Fallback: estimate duration from file size
-            try:
-                file_size = os.path.getsize(audio_path)
-                # Rough estimate: 128kbps MP3 ≈ 16KB/second
-                estimated_duration = file_size / 16000
-                print(f"Using estimated duration: {estimated_duration:.2f} seconds")
-                return estimated_duration
-            except:
-                print("Using default duration: 180 seconds")
-                return 180.0  # Default fallback
+            print(f"⚠️ PyAV duration extraction failed: {str(e)}")
+        
+        # Method 3: Estimate from file size (reliable fallback)
+        try:
+            file_size = os.path.getsize(audio_path)
+            # MP3 bitrate estimation:
+            # - High quality: 320kbps = 40KB/s
+            # - Medium quality: 192kbps = 24KB/s  
+            # - Standard quality: 128kbps = 16KB/s
+            # Use conservative estimate of 128kbps
+            estimated_duration = file_size / 16000
+            print(f"✓ Using file size estimation: {estimated_duration:.2f} seconds ({file_size} bytes)")
+            return estimated_duration
+        except Exception as e:
+            print(f"⚠️ File size estimation failed: {str(e)}")
+        
+        # Method 4: Last resort default
+        print("⚠️ All duration methods failed, using default: 180 seconds")
+        return 180.0
     
     def splice_distributed_pyav(self, speech_chunks, music_path, output_path, music_duration, temp_dir):
         """Distribute speech chunks evenly throughout music using PyAV only"""
@@ -497,7 +511,7 @@ class handler(BaseHTTPRequestHandler):
             raise
     
     def _convert_to_standard_format(self, input_path, output_path):
-        """Convert audio file to standard MP3 format using PyAV"""
+        """Convert audio file to standard MP3 format using PyAV with error recovery"""
         try:
             input_container = av.open(input_path)
             output_container = av.open(output_path, mode='w')
@@ -519,37 +533,69 @@ class handler(BaseHTTPRequestHandler):
                 )
                 print(f"Created resampler: {input_stream.sample_rate}Hz {input_stream.layout.name} -> 44100Hz stereo")
             
-            # Process frames
+            # Process frames with error tolerance
+            frames_processed = 0
+            decode_errors = 0
+            max_decode_errors = 10  # Allow some decode errors before giving up
+            
             for frame in input_container.decode(input_stream):
-                # Resample if needed
-                if resampler:
-                    resampled_frames = resampler.resample(frame)
-                    for resampled_frame in resampled_frames:
-                        # Encode and write
-                        for packet in output_stream.encode(resampled_frame):
+                try:
+                    # Resample if needed
+                    if resampler:
+                        resampled_frames = resampler.resample(frame)
+                        for resampled_frame in resampled_frames:
+                            # Encode and write
+                            for packet in output_stream.encode(resampled_frame):
+                                output_container.mux(packet)
+                    else:
+                        # No resampling needed
+                        for packet in output_stream.encode(frame):
                             output_container.mux(packet)
-                else:
-                    # No resampling needed
-                    for packet in output_stream.encode(frame):
-                        output_container.mux(packet)
+                    frames_processed += 1
+                except Exception as frame_error:
+                    decode_errors += 1
+                    if decode_errors > max_decode_errors:
+                        print(f"⚠️ Too many decode errors ({decode_errors}), stopping conversion")
+                        break
+                    # Continue processing other frames
             
             # Flush resampler if used
             if resampler:
-                remaining_frames = resampler.resample(None)  # Flush
-                for frame in remaining_frames:
-                    for packet in output_stream.encode(frame):
-                        output_container.mux(packet)
+                try:
+                    remaining_frames = resampler.resample(None)  # Flush
+                    for frame in remaining_frames:
+                        for packet in output_stream.encode(frame):
+                            output_container.mux(packet)
+                except Exception as flush_error:
+                    print(f"⚠️ Resampler flush error (non-fatal): {str(flush_error)}")
             
             # Flush encoder
-            for packet in output_stream.encode():
-                output_container.mux(packet)
+            try:
+                for packet in output_stream.encode():
+                    output_container.mux(packet)
+            except Exception as encode_error:
+                print(f"⚠️ Encoder flush error (non-fatal): {str(encode_error)}")
             
             input_container.close()
             output_container.close()
             
+            if frames_processed == 0:
+                raise Exception("No frames were successfully processed")
+            
+            if decode_errors > 0:
+                print(f"⚠️ Conversion completed with {decode_errors} decode errors, {frames_processed} frames processed")
+            
         except Exception as e:
             print(f"❌ Failed to convert {input_path}: {str(e)}")
-            raise
+            # If conversion fails completely, try to just copy the file
+            print(f"🔄 Attempting to use original file without conversion...")
+            try:
+                import shutil
+                shutil.copy2(input_path, output_path)
+                print(f"✓ Using original file as-is")
+            except Exception as copy_error:
+                print(f"❌ Copy also failed: {str(copy_error)}")
+                raise Exception(f"Audio conversion failed and fallback copy failed: {str(e)}")
     
     def _split_music_for_insertion(self, music_path, insertion_points, temp_dir):
         """Split music into segments at insertion points WITHOUT skipping any content"""

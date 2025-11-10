@@ -43,11 +43,38 @@ Now each speech chunk is placed at its calculated insertion point:
 - Proper handling when music is shorter than expected
 - Fallback distribution when available duration is insufficient
 
+## Additional Fixes
+
+### Fix 1: Read-only File System
+**Issue**: `[Errno 30] Read-only file system` error when trying to write to `/tmp` in Vercel's serverless environment.
+
+**Solution**:
+- Updated `concatenate_audio_files` to accept and use `temp_dir` parameter
+- All temp file operations now use the provided writable temp directory
+- Fixed all method calls to pass `temp_dir` through the call chain
+
+### Fix 2: Invalid Audio Data Handling
+**Issue**: `[Errno 1094995529] Invalid data found when processing input: 'avcodec_send_packet()'` when PyAV encounters corrupted or incomplete audio data.
+
+**Solution**:
+- **Enhanced duration detection** with multiple fallback methods:
+  1. Container duration (primary)
+  2. Stream duration (secondary)
+  3. File size estimation (reliable fallback)
+  4. Default value (last resort)
+- **Error-tolerant frame processing** in `_convert_to_standard_format`:
+  - Allows up to 10 decode errors before stopping
+  - Continues processing valid frames even if some fail
+  - Graceful handling of flush errors
+  - Fallback to copy original file if conversion completely fails
+- **Better logging** to track which method succeeded
+
 ## Result
 - **Even Distribution**: All TTS chunks are consistently spaced throughout the song
 - **Robust Processing**: Graceful fallback when advanced processing fails  
 - **Better Compatibility**: Works with various music track lengths
 - **Reliable Operation**: Proper error handling and temp file management
+- **Serverless Compatible**: All file operations use writable temp directories
 
 ## Files Modified
 - `api/splice-audio.py` - Multiple fixes for distribution logic and error handling
