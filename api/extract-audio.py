@@ -60,29 +60,35 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
         'quiet': False,
         'no_warnings': False,
         'extract_flat': False,
+        'nocheckcertificate': True,
+        'no_cache_dir': True,  # Disable cache to avoid read-only filesystem issues
+        'overwrites': True,  # Always overwrite existing files
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
     }
     
-    # Strategy 1: Best audio quality with cookies (if provided)
+    # Strategy 1: Best audio quality with cookies (if provided) - avoid SABR formats
     ydl_opts_cookies = {
         **base_opts,
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
         'cookiefile': cookies_file.name if cookies_file else None,
+        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},  # Prefer clients that work better
     }
     
-    # Strategy 2: Best audio quality standard configuration
+    # Strategy 2: Best audio quality standard configuration - avoid SABR formats
     ydl_opts_standard = {
         **base_opts,
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
+        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
     }
     
-    # Strategy 3: Minimal configuration (fallback)
+    # Strategy 3: Minimal configuration (fallback) - use any available format
     ydl_opts_minimal = {
         **base_opts,
-        'format': 'worst',
+        'format': 'bestaudio/worstaudio/best/worst',
         'ignore_errors': True,
+        'extractor_args': {'youtube': {'player_client': ['android']}},  # Android client is most reliable
     }
     
     # Build strategies list
@@ -109,22 +115,37 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
                 # Download the audio file directly
                 info = ydl.extract_info(url, download=True)
                 
+                # Verify the file was actually downloaded and has content
                 if info and os.path.exists(output_path):
                     file_size = os.path.getsize(output_path)
-                    size_mb = file_size / (1024 * 1024)
                     
-                    print(f"✅ Successfully downloaded audio:")
-                    print(f"   Strategy: {strategy_name}")
-                    print(f"   File size: {size_mb:.2f}MB")
-                    print(f"   Duration: {info.get('duration', 0)}s")
-                    
-                    video_info = {
-                        'title': info.get('title', 'Unknown Title'),
-                        'duration': info.get('duration', 0),
-                        'file_path': output_path,
-                        'file_size': file_size
-                    }
-                    break
+                    # Check if file has actual content (more than 1KB)
+                    if file_size > 1024:
+                        size_mb = file_size / (1024 * 1024)
+                        
+                        print(f"✅ Successfully downloaded audio:")
+                        print(f"   Strategy: {strategy_name}")
+                        print(f"   File size: {size_mb:.2f}MB")
+                        print(f"   Duration: {info.get('duration', 0)}s")
+                        
+                        video_info = {
+                            'title': info.get('title', 'Unknown Title'),
+                            'duration': info.get('duration', 0),
+                            'file_path': output_path,
+                            'file_size': file_size
+                        }
+                        break
+                    else:
+                        print(f"⚠️ Downloaded file is too small ({file_size} bytes), trying next strategy")
+                        # Delete the empty file
+                        try:
+                            os.unlink(output_path)
+                        except:
+                            pass
+                        continue
+                else:
+                    print(f"⚠️ File not found after download, trying next strategy")
+                    continue
                     
         except Exception as e:
             last_error = e
@@ -229,6 +250,13 @@ class handler(BaseHTTPRequestHandler):
                 audio_size_mb = len(audio_data) / (1024 * 1024)
                 duration_minutes = video_info['duration'] / 60
                 
+                # Verify we have actual audio data
+                if len(audio_data) < 1024:
+                    self.send_error_response(500, 
+                        f'Downloaded audio file is empty or corrupted ({len(audio_data)} bytes). '
+                        'This may be due to YouTube restrictions or the video being unavailable.')
+                    return
+                
                 print(f"✅ YouTube audio downloaded successfully:")
                 print(f"   Duration: {duration_minutes:.1f} minutes")
                 print(f"   Size: {audio_size_mb:.2f}MB")
@@ -310,6 +338,13 @@ class handler(BaseHTTPRequestHandler):
         
         if not BLOB_AVAILABLE:
             raise Exception("vercel_blob package not available")
+        
+        # Validate audio content
+        if not audio_content or len(audio_content) == 0:
+            raise Exception("Cannot upload empty audio content to blob storage")
+        
+        content_size_mb = len(audio_content) / (1024 * 1024)
+        print(f"Preparing to upload {content_size_mb:.2f}MB to blob storage")
             
         try:
             # Check for required environment variable
@@ -325,7 +360,7 @@ class handler(BaseHTTPRequestHandler):
             safe_title = re.sub(r'[^\w\-_\.]', '_', title)[:50]
             filename = f"youtube-audio/{session_id}/{safe_title}-{timestamp}-{content_hash}.mp3"
             
-            print(f"Uploading YouTube audio to session folder: {filename}")
+            print(f"Uploading YouTube audio to session folder: {filename} ({content_size_mb:.2f}MB)")
             
             # Upload to Vercel Blob
             blob_result = vercel_blob.put(

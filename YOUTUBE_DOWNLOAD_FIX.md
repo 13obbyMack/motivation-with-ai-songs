@@ -61,14 +61,46 @@ with open(output_path, 'rb') as f:
 - **Better Quality**: Gets the best available audio quality automatically
 - **Proper Handling**: Correctly handles DASH streams, cookies, and authentication
 
+## Additional Issues Fixed
+
+### Issue 1: Read-only File System
+**Problem**: yt-dlp was trying to write cache to `/home/sbx_user1051` which is read-only in serverless environments.
+
+**Solution**: Added `'no_cache_dir': True` to disable caching entirely.
+
+### Issue 2: SABR Streaming
+**Problem**: YouTube was forcing SABR streaming which doesn't provide direct download URLs.
+
+**Solution**: 
+- Changed format selector to prefer `m4a` and `webm` formats which work better
+- Added `extractor_args` to prefer Android and web clients which are more reliable
+- Android client is used as final fallback (most reliable)
+
+### Issue 3: Empty File Downloads
+**Problem**: yt-dlp reported "already downloaded" but file was 0 bytes.
+
+**Solution**:
+- Added `'overwrites': True` to always overwrite existing files
+- Added validation to check file size > 1KB before accepting download
+- Delete empty files and try next strategy
+- Validate audio_content before blob upload
+
+### Issue 4: Blob Upload Failures
+**Problem**: Blob storage rejected empty files with "Missing content-length header" error.
+
+**Solution**:
+- Validate audio data is not empty before attempting upload
+- Add detailed logging of content size
+- Return clear error message if audio is empty
+
 ## Testing
 
 Test with the problematic video:
 - URL: https://www.youtube.com/watch?v=x9tvHvSy890
 - Expected: ~8MB file for 8:33 duration
-- Previous: 139KB incomplete file
+- Previous: 139KB or 0KB incomplete file
 - Now: Full audio file downloaded correctly
 
 ## Files Modified
 
-- `api/extract-audio.py` - Replaced manual download with yt-dlp's built-in download functionality
+- `api/extract-audio.py` - Multiple fixes for download, caching, format selection, and validation
