@@ -389,8 +389,9 @@ class handler(BaseHTTPRequestHandler):
                 # Single chunk goes at the beginning after buffer
                 insertion_points = [buffer_start]
             else:
-                # Multiple chunks distributed evenly
-                interval = available_music_duration / len(speech_chunks)
+                # Multiple chunks distributed evenly - fix: use (len-1) to distribute properly
+                # This ensures chunks are evenly spaced across the available duration
+                interval = available_music_duration / (len(speech_chunks) - 1) if len(speech_chunks) > 1 else 0
                 for i in range(len(speech_chunks)):
                     point = buffer_start + (i * interval)
                     insertion_points.append(point)
@@ -407,29 +408,23 @@ class handler(BaseHTTPRequestHandler):
                 self._convert_to_standard_format(chunk_path, temp_speech)
                 converted_speech.append(temp_speech)
             
-            # Interleave music segments and speech chunks with intro speech first
-            print("Creating final audio with intro speech first, then music + speech alternating...")
+            # Interleave music segments and speech chunks at calculated insertion points
+            print("Creating final audio with evenly distributed speech chunks...")
             temp_files_to_concat = []
             
-            # Pattern: speech_1 (intro) + music_segment_1 + speech_2 + music_segment_2 + speech_3 + ... + final_music_segment
+            # Pattern: music_segment_1 + speech_1 + music_segment_2 + speech_2 + ... + final_music_segment
+            # Each speech chunk is placed at its calculated insertion point
             
-            # Add first speech chunk as intro
-            if len(converted_speech) > 0:
-                temp_files_to_concat.append(converted_speech[0])
-                print("Added speech chunk 1 as intro")
-            
-            # Add music segments and remaining speech chunks alternating
             for i in range(len(insertion_points)):
-                # Add music segment
+                # Add music segment (from previous insertion point to current)
                 if i < len(music_segments) and music_segments[i]:
                     temp_files_to_concat.append(music_segments[i])
                     print(f"Added music segment {i+1}")
                 
-                # Add speech chunk (starting from speech_2 since speech_1 was the intro)
-                speech_index = i + 1  # Skip first speech chunk since it's already added as intro
-                if speech_index < len(converted_speech):
-                    temp_files_to_concat.append(converted_speech[speech_index])
-                    print(f"Added speech chunk {speech_index + 1}")
+                # Add speech chunk at its calculated insertion point
+                if i < len(converted_speech):
+                    temp_files_to_concat.append(converted_speech[i])
+                    print(f"Added speech chunk {i+1} at insertion point {insertion_points[i]:.1f}s")
             
             # Add final music segment (from last insertion point to end)
             if len(music_segments) > len(insertion_points):
