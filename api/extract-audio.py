@@ -68,35 +68,42 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
         },
     }
     
-    # Strategy 1: Best audio quality with cookies (if provided) - avoid SABR formats
+    # Strategy 1: iOS client with cookies (best for avoiding bot detection)
     ydl_opts_cookies = {
         **base_opts,
-        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
+        'format': 'bestaudio/best',
         'cookiefile': cookies_file.name if cookies_file else None,
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},  # Prefer clients that work better
+        'extractor_args': {'youtube': {'player_client': ['ios', 'web']}},
     }
     
-    # Strategy 2: Best audio quality standard configuration - avoid SABR formats
-    ydl_opts_standard = {
+    # Strategy 2: iOS client without cookies (works well for most videos)
+    ydl_opts_ios = {
         **base_opts,
-        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
-        'extractor_args': {'youtube': {'player_client': ['android', 'web']}},
+        'format': 'bestaudio/best',
+        'extractor_args': {'youtube': {'player_client': ['ios']}},
     }
     
-    # Strategy 3: Minimal configuration (fallback) - use any available format
+    # Strategy 3: Android client (fallback, no signature required)
+    ydl_opts_android = {
+        **base_opts,
+        'format': 'bestaudio/best',
+        'extractor_args': {'youtube': {'player_client': ['android']}},
+    }
+    
+    # Strategy 4: Minimal web client (last resort)
     ydl_opts_minimal = {
         **base_opts,
-        'format': 'bestaudio/worstaudio/best/worst',
+        'format': 'worst',
         'ignore_errors': True,
-        'extractor_args': {'youtube': {'player_client': ['android']}},  # Android client is most reliable
     }
     
-    # Build strategies list
+    # Build strategies list - prioritize iOS client which works best
     strategies = []
     if cookies_file:
-        strategies.append(("cookies_best_audio", ydl_opts_cookies))
+        strategies.append(("ios_with_cookies", ydl_opts_cookies))
     strategies.extend([
-        ("standard_best_audio", ydl_opts_standard),
+        ("ios_client", ydl_opts_ios),
+        ("android_client", ydl_opts_android),
         ("minimal_fallback", ydl_opts_minimal)
     ])
     
@@ -152,12 +159,18 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
             error_msg = str(e).lower()
             print(f"⚠️ Strategy {strategy_name} failed: {str(e)}")
             
-            # If it's a JSON parsing error or player response error, try next strategy
-            if any(phrase in error_msg for phrase in ['json', 'player response', 'initial data']):
+            # If it's a bot detection error, continue to next strategy (don't stop)
+            if any(phrase in error_msg for phrase in ['sign in', 'bot', 'captcha']):
+                print(f"   Bot detection triggered, trying next strategy...")
                 continue
-            # If it's a bot detection error, stop trying
-            elif any(phrase in error_msg for phrase in ['sign in', 'bot', 'captcha']):
-                break
+            # If it's a format/signature error, try next strategy
+            elif any(phrase in error_msg for phrase in ['format', 'signature', 'requested format is not available']):
+                print(f"   Format/signature issue, trying next strategy...")
+                continue
+            # If it's a JSON parsing error or player response error, try next strategy
+            elif any(phrase in error_msg for phrase in ['json', 'player response', 'initial data']):
+                print(f"   Parsing error, trying next strategy...")
+                continue
             # For other errors, continue to next strategy
             else:
                 continue

@@ -1,5 +1,5 @@
-# Install latest nightly from main yt-dlp repo
-git+https://github.com/yt-dlp/yt-dlp.git@master
+# Use specific stable version of yt-dlp with EJS support
+yt-dlp==2025.10.22
 yt-dlp-ejs==0.3.1
 openai==2.7.1
 requests==2.32.5

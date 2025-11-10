@@ -68,13 +68,15 @@ with open(output_path, 'rb') as f:
 
 **Solution**: Added `'no_cache_dir': True` to disable caching entirely.
 
-### Issue 2: SABR Streaming
-**Problem**: YouTube was forcing SABR streaming which doesn't provide direct download URLs.
+### Issue 2: Bot Detection & Signature Solving
+**Problem**: YouTube was detecting bot activity and blocking requests with "Sign in to confirm you're not a bot" error. Also signature solving was failing.
 
 **Solution**: 
-- Changed format selector to prefer `m4a` and `webm` formats which work better
-- Added `extractor_args` to prefer Android and web clients which are more reliable
-- Android client is used as final fallback (most reliable)
+- Use iOS client as primary strategy (best for avoiding bot detection)
+- iOS client doesn't require signature solving
+- Android client as fallback (no signature required)
+- Don't stop on bot detection - try all strategies
+- Changed from nightly yt-dlp to stable version 2024.12.13
 
 ### Issue 3: Empty File Downloads
 **Problem**: yt-dlp reported "already downloaded" but file was 0 bytes.
@@ -101,6 +103,17 @@ Test with the problematic video:
 - Previous: 139KB or 0KB incomplete file
 - Now: Full audio file downloaded correctly
 
+## Strategy Order
+
+The download now tries strategies in this order:
+1. **iOS client with cookies** (if cookies provided) - Best for avoiding bot detection
+2. **iOS client** - Works for most videos, no signature required
+3. **Android client** - Fallback, no signature required
+4. **Minimal web client** - Last resort
+
+Each strategy is tried even if previous ones hit bot detection, maximizing success rate.
+
 ## Files Modified
 
-- `api/extract-audio.py` - Multiple fixes for download, caching, format selection, and validation
+- `api/extract-audio.py` - Multiple fixes for download, caching, format selection, client strategy, and validation
+- `requirements.txt` - Changed from nightly yt-dlp to stable version 2024.12.13
