@@ -106,12 +106,39 @@ Test with the problematic video:
 ## Strategy Order
 
 The download now tries strategies in this order:
-1. **iOS client with cookies** (if cookies provided) - Best for avoiding bot detection
-2. **iOS client** - Works for most videos, no signature required
-3. **Android client** - Fallback, no signature required
-4. **Minimal web client** - Last resort
+
+**If cookies are provided:**
+1. **Web client with cookies** - Supports authentication, best with cookies
+2. **Android client with cookies** - Alternative with authentication
+
+**Always tried:**
+3. **iOS client** - No signature required, works for some videos
+4. **Android client** - No signature required
+5. **TV embedded client** - Sometimes bypasses restrictions
+6. **Default web client** - Last resort
 
 Each strategy is tried even if previous ones hit bot detection, maximizing success rate.
+
+## Important Note About YouTube Bot Detection
+
+YouTube is increasingly aggressive about blocking automated downloads from cloud/serverless IPs. If you see "Sign in to confirm you're not a bot" errors:
+
+1. **Export and upload YouTube cookies** - This is the most reliable solution
+   - Export cookies from your browser using a cookies extension
+   - Upload them in the API configuration section
+   - The web client strategy will use these cookies for authentication
+
+2. **Try different videos** - Some videos are more restricted than others
+   - Official artist channels often work better
+   - Popular music videos may have fewer restrictions
+
+3. **Wait and retry** - YouTube may temporarily block an IP
+   - Wait 15-30 minutes before retrying
+   - The block is usually temporary
+
+4. **Alternative: Upload audio directly** - If YouTube continues blocking
+   - Download the audio on your local machine
+   - Upload it directly to the app
 
 ## Files Modified
 

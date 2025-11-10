@@ -68,43 +68,61 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
         },
     }
     
-    # Strategy 1: iOS client with cookies (best for avoiding bot detection)
+    # Strategy 1: Web client with cookies (supports cookies, best chance with authentication)
     ydl_opts_cookies = {
         **base_opts,
         'format': 'bestaudio/best',
         'cookiefile': cookies_file.name if cookies_file else None,
-        'extractor_args': {'youtube': {'player_client': ['ios', 'web']}},
+        'extractor_args': {'youtube': {'player_client': ['web']}},
     }
     
-    # Strategy 2: iOS client without cookies (works well for most videos)
+    # Strategy 2: Android client with cookies (if cookies provided)
+    ydl_opts_android_cookies = {
+        **base_opts,
+        'format': 'bestaudio/best',
+        'cookiefile': cookies_file.name if cookies_file else None,
+        'extractor_args': {'youtube': {'player_client': ['android']}},
+    } if cookies_file else None
+    
+    # Strategy 3: iOS client (no cookies support, but works for some videos)
     ydl_opts_ios = {
         **base_opts,
         'format': 'bestaudio/best',
         'extractor_args': {'youtube': {'player_client': ['ios']}},
     }
     
-    # Strategy 3: Android client (fallback, no signature required)
+    # Strategy 4: Android client without cookies
     ydl_opts_android = {
         **base_opts,
         'format': 'bestaudio/best',
         'extractor_args': {'youtube': {'player_client': ['android']}},
     }
     
-    # Strategy 4: Minimal web client (last resort)
-    ydl_opts_minimal = {
+    # Strategy 5: TV embedded client (sometimes bypasses restrictions)
+    ydl_opts_tv = {
         **base_opts,
-        'format': 'worst',
-        'ignore_errors': True,
+        'format': 'bestaudio/best',
+        'extractor_args': {'youtube': {'player_client': ['tv_embedded']}},
     }
     
-    # Build strategies list - prioritize iOS client which works best
+    # Strategy 6: Default web client (last resort)
+    ydl_opts_default = {
+        **base_opts,
+        'format': 'bestaudio/best',
+    }
+    
+    # Build strategies list - prioritize cookies if provided
     strategies = []
     if cookies_file:
-        strategies.append(("ios_with_cookies", ydl_opts_cookies))
+        strategies.extend([
+            ("web_with_cookies", ydl_opts_cookies),
+            ("android_with_cookies", ydl_opts_android_cookies),
+        ])
     strategies.extend([
         ("ios_client", ydl_opts_ios),
         ("android_client", ydl_opts_android),
-        ("minimal_fallback", ydl_opts_minimal)
+        ("tv_embedded", ydl_opts_tv),
+        ("default_web", ydl_opts_default)
     ])
     
     last_error = None
