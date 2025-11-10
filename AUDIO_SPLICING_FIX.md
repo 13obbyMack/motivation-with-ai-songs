@@ -69,12 +69,28 @@ Now each speech chunk is placed at its calculated insertion point:
   - Fallback to copy original file if conversion completely fails
 - **Better logging** to track which method succeeded
 
+### Fix 3: Music Segment Extraction Failures
+**Issue**: When music segment extraction fails, the final output contains only TTS audio without any music.
+
+**Root Cause**: 
+- `_extract_music_segment` was failing silently or producing empty files
+- Failed segments were still being added to the concatenation list
+- No validation that segments were actually created
+
+**Solution**:
+- **Segment Validation**: Check that each segment file exists and has content before adding to list
+- **Better Error Handling**: Wrap each segment extraction in try-catch with logging
+- **Improved Fallback**: Use simple file copy instead of complex conversion when extraction fails
+- **Failure Detection**: Raise error if no valid music segments created, triggering simple concat fallback
+- **Detailed Logging**: Track valid vs failed segments for debugging
+
 ## Result
 - **Even Distribution**: All TTS chunks are consistently spaced throughout the song
 - **Robust Processing**: Graceful fallback when advanced processing fails  
 - **Better Compatibility**: Works with various music track lengths
 - **Reliable Operation**: Proper error handling and temp file management
 - **Serverless Compatible**: All file operations use writable temp directories
+- **Music Preservation**: Ensures music is always included in final output
 
 ## Files Modified
 - `api/splice-audio.py` - Multiple fixes for distribution logic and error handling

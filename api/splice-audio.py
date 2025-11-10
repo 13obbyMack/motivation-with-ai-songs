@@ -611,9 +611,18 @@ class handler(BaseHTTPRequestHandler):
                 # Create segment from current_start to insertion_point
                 if insertion_point > current_start:
                     segment_path = os.path.join(temp_dir, f"music_segment_{i}.mp3")
-                    self._extract_music_segment(music_path, segment_path, current_start, insertion_point)
-                    music_segments.append(segment_path)
-                    print(f"Music segment {i+1}: {current_start:.1f}s to {insertion_point:.1f}s ({insertion_point - current_start:.1f}s)")
+                    try:
+                        self._extract_music_segment(music_path, segment_path, current_start, insertion_point)
+                        # Verify segment was created
+                        if os.path.exists(segment_path) and os.path.getsize(segment_path) > 0:
+                            music_segments.append(segment_path)
+                            print(f"✓ Music segment {i+1}: {current_start:.1f}s to {insertion_point:.1f}s ({insertion_point - current_start:.1f}s)")
+                        else:
+                            print(f"⚠️ Music segment {i+1} was not created properly, skipping")
+                            music_segments.append(None)
+                    except Exception as seg_error:
+                        print(f"⚠️ Failed to create music segment {i+1}: {str(seg_error)}")
+                        music_segments.append(None)
                 else:
                     music_segments.append(None)  # No segment needed
                 
@@ -623,20 +632,33 @@ class handler(BaseHTTPRequestHandler):
             # Add final music segment from last insertion point to end
             if current_start < music_duration:
                 final_segment_path = os.path.join(temp_dir, "music_segment_final.mp3")
-                self._extract_music_segment(music_path, final_segment_path, current_start, music_duration)
-                music_segments.append(final_segment_path)
-                print(f"Final music segment: {current_start:.1f}s to {music_duration:.1f}s ({music_duration - current_start:.1f}s)")
+                try:
+                    self._extract_music_segment(music_path, final_segment_path, current_start, music_duration)
+                    if os.path.exists(final_segment_path) and os.path.getsize(final_segment_path) > 0:
+                        music_segments.append(final_segment_path)
+                        print(f"✓ Final music segment: {current_start:.1f}s to {music_duration:.1f}s ({music_duration - current_start:.1f}s)")
+                    else:
+                        print(f"⚠️ Final music segment was not created properly")
+                except Exception as final_error:
+                    print(f"⚠️ Failed to create final music segment: {str(final_error)}")
             
             # Verify we're preserving all music content
             total_music_segments_duration = 0
+            valid_segments = 0
             for i, segment in enumerate(music_segments):
                 if segment and os.path.exists(segment):
                     segment_duration = self.get_audio_duration(segment)
                     total_music_segments_duration += segment_duration
+                    valid_segments += 1
                     print(f"Segment {i+1} duration: {segment_duration:.1f}s")
             
             print(f"Original music duration: {music_duration:.1f}s")
             print(f"Total segments duration: {total_music_segments_duration:.1f}s")
+            print(f"Valid segments: {valid_segments}/{len(music_segments)}")
+            
+            # If no valid music segments were created, raise an error to trigger fallback
+            if valid_segments == 0:
+                raise Exception("No valid music segments were created - all segment extractions failed")
             
             return music_segments
             
@@ -718,11 +740,14 @@ class handler(BaseHTTPRequestHandler):
             
         except Exception as e:
             print(f"❌ Failed to extract music segment: {str(e)}")
-            # Fallback: create a silent segment or copy the whole file
+            # Fallback: copy the entire music file as segment (better than nothing)
             try:
                 print("Fallback: copying entire music file as segment")
-                self._convert_to_standard_format(input_path, output_path)
-            except:
+                import shutil
+                shutil.copy2(input_path, output_path)
+                print(f"✓ Copied entire music file as fallback segment")
+            except Exception as fallback_error:
+                print(f"❌ Fallback copy also failed: {str(fallback_error)}")
                 raise Exception(f"Music segment extraction failed: {str(e)}")
     
 
