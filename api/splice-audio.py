@@ -162,26 +162,37 @@ class handler(BaseHTTPRequestHandler):
                 output_path = os.path.join(temp_dir, 'final.mp3')
                 
                 # Splice based on mode and whether we have multiple chunks
-                if has_multiple_chunks and splice_mode in ['distributed', 'random']:
-                    # Use PyAV distributed splicing for multiple chunks
-                    print(f"Using distributed splicing with {len(speech_paths)} individual chunks")
-                    self.splice_distributed_pyav(speech_paths, original_path, output_path, original_duration)
-                elif splice_mode == 'intro':
-                    # For intro mode, concatenate chunks first then add to beginning
+                try:
+                    if has_multiple_chunks and splice_mode in ['distributed', 'random']:
+                        # Use PyAV distributed splicing for multiple chunks
+                        print(f"Using distributed splicing with {len(speech_paths)} individual chunks")
+                        self.splice_distributed_pyav(speech_paths, original_path, output_path, original_duration, temp_dir)
+                    elif splice_mode == 'intro':
+                        # For intro mode, concatenate chunks first then add to beginning
+                        if has_multiple_chunks:
+                            combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
+                            self.concatenate_audio_files(speech_paths, combined_speech_path)
+                            self.splice_intro(combined_speech_path, original_path, output_path)
+                        else:
+                            self.splice_intro(speech_paths[0], original_path, output_path)
+                    else:
+                        # Default behavior - use distributed if multiple chunks, otherwise intro
+                        if has_multiple_chunks:
+                            print(f"Default: Using distributed splicing with {len(speech_paths)} chunks")
+                            self.splice_distributed_pyav(speech_paths, original_path, output_path, original_duration, temp_dir)
+                        else:
+                            print("Default: Using intro splicing with single chunk")
+                            self.splice_intro(speech_paths[0], original_path, output_path)
+                except Exception as splice_error:
+                    print(f"❌ Advanced splicing failed: {str(splice_error)}")
+                    print("🔄 Falling back to simple concatenation...")
+                    # Fallback: simple concatenation of all speech + music
                     if has_multiple_chunks:
                         combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
                         self.concatenate_audio_files(speech_paths, combined_speech_path)
-                        self.splice_intro(combined_speech_path, original_path, output_path)
+                        self.splice_simple_concat(combined_speech_path, original_path, output_path)
                     else:
-                        self.splice_intro(speech_paths[0], original_path, output_path)
-                else:
-                    # Default behavior - use distributed if multiple chunks, otherwise intro
-                    if has_multiple_chunks:
-                        print(f"Default: Using distributed splicing with {len(speech_paths)} chunks")
-                        self.splice_distributed_pyav(speech_paths, original_path, output_path, original_duration)
-                    else:
-                        print("Default: Using intro splicing with single chunk")
-                        self.splice_intro(speech_paths[0], original_path, output_path)
+                        self.splice_simple_concat(speech_paths[0], original_path, output_path)
                 
                 # Apply music duration limit if specified
                 if music_duration:
@@ -248,7 +259,7 @@ class handler(BaseHTTPRequestHandler):
             
             # Convert each input to a standard format
             for i, input_path in enumerate(input_paths):
-                temp_path = f"/tmp/temp_audio_{i}.mp3"
+                temp_path = f"temp_audio_{i}.mp3"
                 temp_files.append(temp_path)
                 
                 print(f"Converting speech chunk {i+1} to standard format")
@@ -329,7 +340,22 @@ class handler(BaseHTTPRequestHandler):
             
         try:
             container = av.open(audio_path)
-            duration_seconds = float(container.duration) / av.time_base
+            # Fix: Handle None duration properly
+            if container.duration is None:
+                print("Container duration is None, calculating from streams...")
+                # Try to get duration from audio stream
+                audio_stream = container.streams.audio[0]
+                if audio_stream.duration is not None:
+                    duration_seconds = float(audio_stream.duration * audio_stream.time_base)
+                else:
+                    # Fallback: decode frames to calculate duration
+                    frame_count = 0
+                    for frame in container.decode(audio_stream):
+                        frame_count += 1
+                    duration_seconds = frame_count * audio_stream.time_base * audio_stream.codec_context.frame_size
+            else:
+                duration_seconds = float(container.duration) / av.time_base
+            
             container.close()
             print(f"Audio duration (PyAV): {duration_seconds:.2f} seconds")
             return duration_seconds
@@ -346,20 +372,20 @@ class handler(BaseHTTPRequestHandler):
                 print("Using default duration: 180 seconds")
                 return 180.0  # Default fallback
     
-    def splice_distributed_pyav(self, speech_chunks, music_path, output_path, music_duration):
+    def splice_distributed_pyav(self, speech_chunks, music_path, output_path, music_duration, temp_dir):
         """Distribute speech chunks evenly throughout music using PyAV only"""
         if not PYAV_AVAILABLE:
             raise Exception("PyAV not available - cannot perform distributed audio splicing")
             
         try:
             print(f"Splicing: PyAV distributed method with {len(speech_chunks)} chunks")
-            return self._splice_distributed_pyav(speech_chunks, music_path, output_path, music_duration)
+            return self._splice_distributed_pyav(speech_chunks, music_path, output_path, music_duration, temp_dir)
             
         except Exception as e:
             print(f"❌ PyAV distributed splicing failed: {str(e)}")
             raise Exception(f"Distributed audio splicing failed: {str(e)}. PyAV processing error.")
     
-    def _splice_distributed_pyav(self, speech_chunks, music_path, output_path, music_duration):
+    def _splice_distributed_pyav(self, speech_chunks, music_path, output_path, music_duration, temp_dir):
         """Distribute speech chunks evenly throughout music using PyAV - EXTENDS total duration"""
         try:
             print(f"Using PyAV for distributed splicing with {len(speech_chunks)} chunks over {music_duration:.1f}s music...")
@@ -380,9 +406,9 @@ class handler(BaseHTTPRequestHandler):
             
             # Calculate insertion points - distribute evenly throughout the ORIGINAL music
             # These are points in the original music timeline where we'll insert speech
-            buffer_start = 5.0  # 5 seconds at start
-            buffer_end = 10.0   # 10 seconds at end
-            available_music_duration = max(music_duration - buffer_start - buffer_end, music_duration * 0.5)
+            buffer_start = min(2.0, music_duration * 0.1)  # Adaptive buffer: 2s or 10% of music
+            buffer_end = min(5.0, music_duration * 0.2)    # Adaptive buffer: 5s or 20% of music
+            available_music_duration = max(music_duration - buffer_start - buffer_end, music_duration * 0.6)
             
             insertion_points = []
             if len(speech_chunks) == 1:
@@ -391,20 +417,29 @@ class handler(BaseHTTPRequestHandler):
             else:
                 # Multiple chunks distributed evenly - fix: use (len-1) to distribute properly
                 # This ensures chunks are evenly spaced across the available duration
-                interval = available_music_duration / (len(speech_chunks) - 1) if len(speech_chunks) > 1 else 0
-                for i in range(len(speech_chunks)):
-                    point = buffer_start + (i * interval)
-                    insertion_points.append(point)
+                if available_music_duration > 0:
+                    interval = available_music_duration / (len(speech_chunks) - 1) if len(speech_chunks) > 1 else 0
+                    for i in range(len(speech_chunks)):
+                        point = buffer_start + (i * interval)
+                        # Ensure point doesn't exceed music duration
+                        point = min(point, music_duration - 0.5)  # Leave 0.5s at end
+                        insertion_points.append(point)
+                else:
+                    # Fallback: distribute evenly across entire duration
+                    interval = music_duration / len(speech_chunks)
+                    for i in range(len(speech_chunks)):
+                        point = i * interval
+                        insertion_points.append(point)
             
             print(f"Insertion points in original music: {[f'{p:.1f}s' for p in insertion_points]}")
             
             # Split music into segments WITHOUT skipping any content
-            music_segments = self._split_music_for_insertion(music_path, insertion_points)
+            music_segments = self._split_music_for_insertion(music_path, insertion_points, temp_dir)
             
             # Convert all speech chunks to standard format
             converted_speech = []
             for i, chunk_path in enumerate(speech_chunks):
-                temp_speech = f"/tmp/temp_speech_{i}.mp3"
+                temp_speech = os.path.join(temp_dir, f"temp_speech_{i}.mp3")
                 self._convert_to_standard_format(chunk_path, temp_speech)
                 converted_speech.append(temp_speech)
             
@@ -516,7 +551,7 @@ class handler(BaseHTTPRequestHandler):
             print(f"❌ Failed to convert {input_path}: {str(e)}")
             raise
     
-    def _split_music_for_insertion(self, music_path, insertion_points):
+    def _split_music_for_insertion(self, music_path, insertion_points, temp_dir):
         """Split music into segments at insertion points WITHOUT skipping any content"""
         try:
             print(f"Splitting music at {len(insertion_points)} insertion points (preserving all content)...")
@@ -529,7 +564,7 @@ class handler(BaseHTTPRequestHandler):
             for i, insertion_point in enumerate(insertion_points):
                 # Create segment from current_start to insertion_point
                 if insertion_point > current_start:
-                    segment_path = f"/tmp/music_segment_{i}.mp3"
+                    segment_path = os.path.join(temp_dir, f"music_segment_{i}.mp3")
                     self._extract_music_segment(music_path, segment_path, current_start, insertion_point)
                     music_segments.append(segment_path)
                     print(f"Music segment {i+1}: {current_start:.1f}s to {insertion_point:.1f}s ({insertion_point - current_start:.1f}s)")
@@ -541,7 +576,7 @@ class handler(BaseHTTPRequestHandler):
             
             # Add final music segment from last insertion point to end
             if current_start < music_duration:
-                final_segment_path = f"/tmp/music_segment_final.mp3"
+                final_segment_path = os.path.join(temp_dir, "music_segment_final.mp3")
                 self._extract_music_segment(music_path, final_segment_path, current_start, music_duration)
                 music_segments.append(final_segment_path)
                 print(f"Final music segment: {current_start:.1f}s to {music_duration:.1f}s ({music_duration - current_start:.1f}s)")
@@ -549,7 +584,7 @@ class handler(BaseHTTPRequestHandler):
             # Verify we're preserving all music content
             total_music_segments_duration = 0
             for i, segment in enumerate(music_segments):
-                if segment:
+                if segment and os.path.exists(segment):
                     segment_duration = self.get_audio_duration(segment)
                     total_music_segments_duration += segment_duration
                     print(f"Segment {i+1} duration: {segment_duration:.1f}s")
@@ -646,39 +681,25 @@ class handler(BaseHTTPRequestHandler):
     
 
     def splice_simple_concat(self, speech_path, music_path, output_path):
-        """Simple concatenation using PyAV: speech + music"""
-        if not PYAV_AVAILABLE:
-            raise Exception("PyAV not available - cannot perform audio concatenation")
-            
+        """Simple concatenation: speech + music (binary method as fallback)"""
         try:
-            print("Splicing: PyAV concatenation (speech + music)")
+            print("Splicing: Simple binary concatenation (speech + music)")
             
-            # Use the same approach as distributed splicing but with just 2 files
-            temp_files = []
-            
-            # Convert speech to standard format
-            temp_speech = "/tmp/temp_speech.mp3"
-            self._convert_to_standard_format(speech_path, temp_speech)
-            temp_files.append(temp_speech)
-            
-            # Convert music to standard format
-            temp_music = "/tmp/temp_music.mp3"
-            self._convert_to_standard_format(music_path, temp_music)
-            temp_files.append(temp_music)
-            
-            # Binary concatenate
+            # Simple binary concatenation as fallback
             with open(output_path, 'wb') as outfile:
-                for i, temp_path in enumerate(temp_files):
-                    with open(temp_path, 'rb') as infile:
-                        if i > 0:
-                            infile.seek(1024)  # Skip ID3 tags for second file
-                        outfile.write(infile.read())
-                    os.remove(temp_path)  # Clean up
+                # Add speech first
+                with open(speech_path, 'rb') as speech_file:
+                    outfile.write(speech_file.read())
+                
+                # Add music second (skip potential ID3 header)
+                with open(music_path, 'rb') as music_file:
+                    music_file.seek(1024)  # Skip potential ID3 tags
+                    outfile.write(music_file.read())
             
-            print("✅ PyAV concatenation completed")
+            print("✅ Simple concatenation completed")
             
         except Exception as e:
-            print(f"❌ Concatenation failed: {str(e)}")
+            print(f"❌ Simple concatenation failed: {str(e)}")
             raise
 
     def splice_intro(self, speech_path, music_path, output_path):

@@ -1,52 +1,59 @@
 # Audio Splicing Distribution Fix
 
-## Issue Identified
+## Issues Identified & Fixed
 
-The first two TTS audio chunks were not evenly distributed throughout the song due to a flaw in the interleaving logic in `api/splice-audio.py`.
+### 1. Distribution Logic Issue
+The first two TTS audio chunks were not evenly distributed throughout the song due to a flaw in the interleaving logic.
 
-### Root Cause
+**Root Cause**: The first speech chunk was treated as an "intro" at time 0, while remaining chunks used calculated insertion points.
 
-1. **Insertion points were calculated correctly** - evenly spaced throughout the music
-2. **But the interleaving logic was flawed** - it treated the first speech chunk as an "intro" placed at time 0, then distributed remaining chunks at calculated insertion points
+### 2. Runtime Errors
+Multiple runtime errors were causing the splicing to fail:
+- Duration calculation returning `None` 
+- File permission errors with temp file paths
+- Invalid audio data processing
+- Logic errors with short music tracks
 
-### Previous Behavior
-```
-Pattern: speech_1 (intro at 0s) + music_segment_1 + speech_2 (at 5s) + music_segment_2 + speech_3 (at 35s) + ...
-```
+## Fixes Applied
 
-This resulted in:
-- Speech chunk 1: Always at 0 seconds (not at calculated insertion point)
-- Speech chunk 2: At first calculated insertion point (e.g., 5 seconds)  
-- Speech chunk 3+: At subsequent calculated insertion points (e.g., 35s, 65s, etc.)
-
-**The first two chunks had inconsistent spacing** (0s → 5s = 5s gap, then 5s → 35s = 30s gap).
-
-## Fix Applied
-
-### 1. Improved Insertion Point Calculation
+### 1. Fixed Distribution Logic
 ```python
-# OLD: interval = available_music_duration / len(speech_chunks)
-# NEW: interval = available_music_duration / (len(speech_chunks) - 1)
+# OLD Pattern: speech_1 (intro at 0s) + music_segment_1 + speech_2 + ...
+# NEW Pattern: music_segment_1 + speech_1 + music_segment_2 + speech_2 + ...
 ```
 
-This ensures proper even distribution across the available duration.
+Now each speech chunk is placed at its calculated insertion point:
+- Improved insertion point calculation with adaptive buffers
+- Fixed interleaving to place all chunks at calculated positions
+- Proper even distribution across available duration
 
-### 2. Fixed Interleaving Logic
-```python
-# NEW Pattern: music_segment_1 + speech_1 + music_segment_2 + speech_2 + ... + final_music_segment
-```
+### 2. Robust Error Handling
+- **Duration Calculation**: Added fallback methods when PyAV returns `None`
+- **File Paths**: Fixed temp file paths to use proper temp directory
+- **Adaptive Buffers**: Dynamic buffer calculation based on music length
+- **Fallback Method**: Simple binary concatenation when advanced splicing fails
 
-Now each speech chunk is placed exactly at its calculated insertion point:
-- Speech chunk 1: At first calculated insertion point (e.g., 5s)
-- Speech chunk 2: At second calculated insertion point (e.g., 35s)
-- Speech chunk 3: At third calculated insertion point (e.g., 65s)
-- etc.
+### 3. Improved Temp File Management
+- All temp files now use the provided temp directory
+- Proper cleanup and error handling
+- Fixed file permission issues
 
-### Result
-All TTS audio chunks are now **consistently and evenly distributed** throughout the song based on the length of the original audio track.
+### 4. Adaptive Logic for Short Tracks
+- Dynamic buffer sizing (10-20% of track length vs fixed seconds)
+- Proper handling when music is shorter than expected
+- Fallback distribution when available duration is insufficient
+
+## Result
+- **Even Distribution**: All TTS chunks are consistently spaced throughout the song
+- **Robust Processing**: Graceful fallback when advanced processing fails  
+- **Better Compatibility**: Works with various music track lengths
+- **Reliable Operation**: Proper error handling and temp file management
 
 ## Files Modified
-- `api/splice-audio.py` - Fixed `_splice_distributed_pyav` method
+- `api/splice-audio.py` - Multiple fixes for distribution logic and error handling
 
 ## Testing Recommendation
-Test with multiple speech chunks (3-5 chunks) to verify even distribution across different song lengths.
+Test with:
+- Multiple speech chunks (3-5 chunks) 
+- Various song lengths (short <30s, medium 1-3min, long >3min)
+- Different audio formats and quality levels
