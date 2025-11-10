@@ -1,4 +1,6 @@
-yt-dlp==2025.10.22
+# yt-dlp==2025.10.22
+yt-dlp-ejs
+yt-dlp@git+https://github.com/yt-dlp/yt-dlp-nightly-builds.git@master
 openai==2.7.1
 requests==2.32.5
 vercel_blob==0.4.2
