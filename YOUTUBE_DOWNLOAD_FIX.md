@@ -140,7 +140,25 @@ YouTube is increasingly aggressive about blocking automated downloads from cloud
    - Download the audio on your local machine
    - Upload it directly to the app
 
+## JavaScript Runtime Configuration
+
+Added support for JavaScript runtime to solve YouTube's signature challenges:
+
+```python
+'js_runtimes': 'node',  # Use Node.js for JavaScript execution
+'remote_components': 'ejs:github',  # Use EJS from GitHub for challenge solving
+```
+
+These options enable:
+- **Signature solving**: Decrypts YouTube's obfuscated video URLs
+- **Challenge solving**: Handles YouTube's bot detection challenges
+- **N-parameter solving**: Decodes throttling parameters
+
+Requirements:
+- `yt-dlp-ejs==0.3.1` package (already in requirements.txt)
+- Node.js runtime (checked at runtime, warning if not available)
+
 ## Files Modified
 
-- `api/extract-audio.py` - Multiple fixes for download, caching, format selection, client strategy, and validation
-- `requirements.txt` - Changed from nightly yt-dlp to stable version 2024.12.13
+- `api/extract-audio.py` - Multiple fixes for download, caching, format selection, client strategy, JavaScript runtime, and validation
+- `requirements.txt` - Uses nightly yt-dlp build with yt-dlp-ejs for JavaScript support
