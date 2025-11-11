@@ -30,7 +30,20 @@ def validate_youtube_url(url: str) -> bool:
     return bool(YOUTUBE_URL_REGEX.match(url.strip()))
 
 def download_youtube_audio(url: str, output_path: str, cookies_content: str = None) -> dict:
-    """Download audio from YouTube using yt-dlp with optional cookies support"""
+    """Download audio from YouTube using yt-dlp with QuickJS runtime for JS challenges"""
+    
+    # Locate QuickJS binary
+    qjs_path = os.path.join(os.path.dirname(__file__), '_bin', 'qjs')
+    if not os.path.exists(qjs_path):
+        print(f"⚠️ QuickJS binary not found at {qjs_path}, YouTube downloads may fail")
+        qjs_path = None
+    else:
+        print(f"✅ QuickJS binary found at {qjs_path}")
+        # Ensure it's executable
+        try:
+            os.chmod(qjs_path, 0o755)
+        except:
+            pass
     
     # Create temporary cookies file if cookies provided
     cookies_file = None
@@ -67,6 +80,19 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
     }
+    
+    # Configure QuickJS runtime for YouTube JS challenges
+    # The js_runtime parameter is passed to the YouTube extractor
+    if qjs_path:
+        if 'extractor_args' not in base_opts:
+            base_opts['extractor_args'] = {}
+        if 'youtube' not in base_opts['extractor_args']:
+            base_opts['extractor_args']['youtube'] = {}
+        
+        # Set the JS runtime path for YouTube extractor
+        # This will be used when YouTube requires solving JS challenges
+        base_opts['extractor_args']['youtube']['js_runtime'] = f'quickjs:{qjs_path}'
+        print(f"   Configured yt-dlp to use QuickJS for JS challenges")
     
     # Strategy 1: Web client with cookies (supports cookies, best chance with authentication)
     ydl_opts_cookies = {

@@ -25,13 +25,15 @@
 
 # misc
 /.kiro/
-/.github/
-/scripts/
 VERCEL_DEPLOYMENT_GUIDE.md
 .DS_Store
 *.pem
 /.vscode/
 /docs
+
+# Keep these for QuickJS setup
+# /.github/
+# /scripts/
 
 # Python cache files (for API functions)
 __pycache__/

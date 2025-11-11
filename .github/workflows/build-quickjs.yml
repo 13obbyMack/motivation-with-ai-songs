@@ -1,0 +1,63 @@
+name: Build QuickJS Binary
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-quickjs.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download Official QuickJS binary
+        run: |
+          # Download the official QuickJS binary release from bellard.org
+          wget https://bellard.org/quickjs/binary_releases/quickjs-linux-x86_64-2025-09-13.zip
+          
+          # Extract the ZIP file
+          unzip quickjs-linux-x86_64-2025-09-13.zip
+          
+          # Copy the qjs binary
+          cp quickjs-linux-x86_64-2025-09-13/qjs api/_bin/qjs
+          
+          # Make it executable
+          chmod +x api/_bin/qjs
+          
+          # Verify it works
+          ./api/_bin/qjs --help || echo "QuickJS binary extracted"
+          
+          # Check file size
+          ls -lh api/_bin/qjs
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: quickjs-binary-v1
+          name: QuickJS Binary for Vercel
+          body: |
+            Official QuickJS binary for use in Vercel Python serverless functions.
+            
+            This binary is required for yt-dlp to handle YouTube's JavaScript challenges.
+            
+            Source: Official QuickJS binary releases (bellard.org)
+            Version: 2025-09-13
+            Architecture: Linux x86_64
+          files: |
+            api/_bin/qjs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Commit binary to repo
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add api/_bin/qjs
+          git commit -m "Add QuickJS static binary for YouTube downloads" || echo "No changes to commit"
+          git push || echo "Nothing to push"

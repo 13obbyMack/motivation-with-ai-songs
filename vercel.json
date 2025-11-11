@@ -23,7 +23,7 @@
     }
   },
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "chmod +x api/_bin/qjs 2>/dev/null || true && npm run build",
   "outputDirectory": ".next",
   "installCommand": "npm ci",
   "devCommand": "npm run dev:verbose",

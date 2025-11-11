@@ -80,6 +80,17 @@ git clone <repository-url>
 cd ai-motivation-song-generator
 npm install
 
+# Set up QuickJS for YouTube downloads (required for 2025+)
+# Choose one method:
+
+# Option 1: GitHub Action (easiest)
+# Go to Actions tab → Run "Build QuickJS Binary" workflow
+
+# Option 2: Download script
+./scripts/download-quickjs.sh  # Linux/Mac
+# or
+powershell -ExecutionPolicy Bypass -File scripts/download-quickjs.ps1  # Windows
+
 # Start development server (includes API functions)
 npm run dev
 ```
@@ -88,7 +99,12 @@ npm run dev
 
 - Node.js 18+
 - Python 3.9+ (for API functions)
+- QuickJS binary (for YouTube downloads) - see setup above
 - No additional setup needed - Vercel handles Python dependencies
+
+**⚠️ Important: YouTube Downloads (2025+)**
+
+YouTube now requires a JavaScript runtime to solve JS challenges. This project uses QuickJS (~5 MB) instead of Deno (~100 MB) to stay under Vercel's limits. See `QUICKSTART.md` for setup instructions.
 
 ### Available Scripts
 
