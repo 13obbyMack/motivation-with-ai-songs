@@ -32,17 +32,6 @@ def validate_youtube_url(url: str) -> bool:
 def download_youtube_audio(url: str, output_path: str, cookies_content: str = None) -> dict:
     """Download audio from YouTube using yt-dlp with optional cookies support"""
     
-    # Check if Node.js is available for JavaScript runtime
-    import subprocess
-    try:
-        node_check = subprocess.run(['node', '--version'], capture_output=True, timeout=5)
-        if node_check.returncode == 0:
-            print(f"✓ Node.js available: {node_check.stdout.decode().strip()}")
-        else:
-            print("⚠️ Node.js not found - signature solving may fail")
-    except Exception as e:
-        print(f"⚠️ Node.js check failed: {str(e)} - signature solving may fail")
-    
     # Create temporary cookies file if cookies provided
     cookies_file = None
     if cookies_content:
@@ -74,9 +63,6 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
         'nocheckcertificate': True,
         'no_cache_dir': True,  # Disable cache to avoid read-only filesystem issues
         'overwrites': True,  # Always overwrite existing files
-        # JavaScript runtime configuration for signature solving
-        'js_runtimes': 'node',  # Use Node.js for JavaScript execution
-        'remote_components': 'ejs:github',  # Use EJS from GitHub for challenge solving
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },

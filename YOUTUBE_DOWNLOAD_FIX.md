@@ -140,23 +140,14 @@ YouTube is increasingly aggressive about blocking automated downloads from cloud
    - Download the audio on your local machine
    - Upload it directly to the app
 
-## JavaScript Runtime Configuration
+## JavaScript Runtime Limitation
 
-Added support for JavaScript runtime to solve YouTube's signature challenges:
+**Note**: JavaScript runtime (Node.js) is NOT available in Vercel's Python serverless environment. This means:
+- Signature solving that requires JavaScript will not work
+- We rely on YouTube clients that don't require signature solving (iOS, Android, TV embedded)
+- These clients work without JavaScript by using different API endpoints
 
-```python
-'js_runtimes': 'node',  # Use Node.js for JavaScript execution
-'remote_components': 'ejs:github',  # Use EJS from GitHub for challenge solving
-```
-
-These options enable:
-- **Signature solving**: Decrypts YouTube's obfuscated video URLs
-- **Challenge solving**: Handles YouTube's bot detection challenges
-- **N-parameter solving**: Decodes throttling parameters
-
-Requirements:
-- `yt-dlp-ejs==0.3.1` package (already in requirements.txt)
-- Node.js runtime (checked at runtime, warning if not available)
+The `yt-dlp-ejs` package is included in requirements but cannot be used without Node.js. The download strategies are designed to work around this limitation by using clients that don't require signature solving.
 
 ## Files Modified
 
