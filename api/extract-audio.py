@@ -94,62 +94,99 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
         base_opts['extractor_args']['youtube']['js_runtime'] = f'quickjs:{qjs_path}'
         print(f"   Configured yt-dlp to use QuickJS for JS challenges")
     
-    # Strategy 1: Web client with cookies (supports cookies, best chance with authentication)
-    ydl_opts_cookies = {
+    # Better format selection to avoid SABR streaming issues
+    # Use multiple format fallbacks with audio-only preference
+    format_selector = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best[height<=480]/best'
+    
+    # Strategy 1: Android SDK-less client (best for audio, no signature required)
+    ydl_opts_android_sdkless = {
         **base_opts,
-        'format': 'bestaudio/best',
-        'cookiefile': cookies_file.name if cookies_file else None,
-        'extractor_args': {'youtube': {'player_client': ['web']}},
+        'format': format_selector,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android_sdkless'],
+            }
+        },
     }
     
-    # Strategy 2: Android client with cookies (if cookies provided)
-    ydl_opts_android_cookies = {
-        **base_opts,
-        'format': 'bestaudio/best',
-        'cookiefile': cookies_file.name if cookies_file else None,
-        'extractor_args': {'youtube': {'player_client': ['android']}},
-    } if cookies_file else None
-    
-    # Strategy 3: iOS client (no cookies support, but works for some videos)
+    # Strategy 2: iOS client (no signature required, works for most videos)
     ydl_opts_ios = {
         **base_opts,
-        'format': 'bestaudio/best',
-        'extractor_args': {'youtube': {'player_client': ['ios']}},
+        'format': format_selector,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['ios'],
+            }
+        },
     }
     
-    # Strategy 4: Android client without cookies
+    # Strategy 3: Android client (reliable fallback)
     ydl_opts_android = {
         **base_opts,
-        'format': 'bestaudio/best',
-        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'format': format_selector,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android'],
+            }
+        },
     }
     
-    # Strategy 5: TV embedded client (sometimes bypasses restrictions)
+    # Strategy 4: TV client (good for bypassing some restrictions)
     ydl_opts_tv = {
         **base_opts,
-        'format': 'bestaudio/best',
-        'extractor_args': {'youtube': {'player_client': ['tv_embedded']}},
+        'format': format_selector,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['tv'],
+            }
+        },
     }
     
-    # Strategy 6: Default web client (last resort)
-    ydl_opts_default = {
+    # Strategy 5: TV embedded (for age-restricted content)
+    ydl_opts_tv_embedded = {
         **base_opts,
-        'format': 'bestaudio/best',
+        'format': format_selector,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['tv_embedded'],
+            }
+        },
     }
     
-    # Build strategies list - prioritize cookies if provided
-    strategies = []
-    if cookies_file:
-        strategies.extend([
-            ("web_with_cookies", ydl_opts_cookies),
-            ("android_with_cookies", ydl_opts_android_cookies),
-        ])
-    strategies.extend([
+    # Strategy 6: Web Safari (with cookies if provided)
+    ydl_opts_web_safari = {
+        **base_opts,
+        'format': format_selector,
+        'cookiefile': cookies_file.name if cookies_file else None,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['web_safari'],
+            }
+        },
+    }
+    
+    # Strategy 7: Multiple clients (let yt-dlp choose best)
+    ydl_opts_multi = {
+        **base_opts,
+        'format': format_selector,
+        'cookiefile': cookies_file.name if cookies_file else None,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android_sdkless', 'ios', 'tv'],
+            }
+        },
+    }
+    
+    # Build strategies list - prioritize clients that don't require signatures
+    strategies = [
+        ("android_sdkless", ydl_opts_android_sdkless),
         ("ios_client", ydl_opts_ios),
         ("android_client", ydl_opts_android),
-        ("tv_embedded", ydl_opts_tv),
-        ("default_web", ydl_opts_default)
-    ])
+        ("tv_client", ydl_opts_tv),
+        ("tv_embedded", ydl_opts_tv_embedded),
+        ("web_safari", ydl_opts_web_safari),
+        ("multi_client", ydl_opts_multi),
+    ]
     
     last_error = None
     video_info = None

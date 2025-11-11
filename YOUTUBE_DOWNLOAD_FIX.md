@@ -105,19 +105,19 @@ Test with the problematic video:
 
 ## Strategy Order
 
-The download now tries strategies in this order:
+The download now tries strategies in this order (optimized for 2025 YouTube requirements):
 
-**If cookies are provided:**
-1. **Web client with cookies** - Supports authentication, best with cookies
-2. **Android client with cookies** - Alternative with authentication
+1. **Android SDK-less client** - Best for audio, no signature required, avoids SABR streaming issues
+2. **iOS client** - No signature required, works for most videos
+3. **Android client** - Reliable fallback, no signature required
+4. **TV client** - Good for bypassing some restrictions
+5. **TV embedded client** - Works for age-restricted content
+6. **Web Safari client** - Uses cookies if provided, good compatibility
+7. **Multi-client** - Lets yt-dlp choose best from android_sdkless, ios, tv
 
-**Always tried:**
-3. **iOS client** - No signature required, works for some videos
-4. **Android client** - No signature required
-5. **TV embedded client** - Sometimes bypasses restrictions
-6. **Default web client** - Last resort
+Each strategy uses improved format selection: `bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best[height<=480]/best`
 
-Each strategy is tried even if previous ones hit bot detection, maximizing success rate.
+This avoids SABR streaming issues and signature extraction failures while prioritizing audio quality.
 
 ## Important Note About YouTube Bot Detection
 
