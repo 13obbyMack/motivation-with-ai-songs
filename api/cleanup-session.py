@@ -56,7 +56,8 @@ class handler(BaseHTTPRequestHandler):
             session_patterns = [
                 f"youtube-audio/{session_id}/",
                 f"tts-audio/{session_id}/",
-                f"final-audio/{session_id}/"
+                f"final-audio/{session_id}/",
+                f"custom-audio/{session_id}/"
             ]
             
             total_files_deleted = 0
