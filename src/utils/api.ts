@@ -42,7 +42,7 @@ async function apiRequest<T>(
 }
 
 /**
- * Upload custom audio file using multipart/form-data to avoid payload size limits
+ * Upload custom audio file directly to Vercel Blob using client-side upload
  */
 export async function uploadAudio(audioFile: File, sessionId?: string): Promise<{
   audioData?: string;
@@ -56,71 +56,68 @@ export async function uploadAudio(audioFile: File, sessionId?: string): Promise<
   sessionId?: string;
 }> {
   try {
-    // Use FormData to send file as multipart/form-data (avoids base64 overhead)
-    const formData = new FormData();
-    formData.append('audioFile', audioFile);
-    formData.append('filename', audioFile.name);
-    if (sessionId) {
-      formData.append('sessionId', sessionId);
-    }
+    console.log(`Uploading ${audioFile.size} bytes (${(audioFile.size / (1024 * 1024)).toFixed(2)}MB) directly to blob storage`);
     
-    console.log(`Uploading ${audioFile.size} bytes (${(audioFile.size / (1024 * 1024)).toFixed(2)}MB) to server`);
+    // Use Vercel Blob client-side upload
+    const { upload } = await import('@vercel/blob/client');
     
-    const url = `${API_BASE_URL}/api/upload-audio`;
-    const response = await fetch(url, {
-      method: 'POST',
-      body: formData,
-      // Don't set Content-Type header - browser will set it with boundary
+    // Create a unique filename with session-based folder structure
+    const timestamp = Date.now();
+    const sanitizedFilename = audioFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const blobPath = `custom-audio/${sessionId}/${sanitizedFilename}-${timestamp}.mp3`;
+    
+    console.log(`Uploading to blob path: ${blobPath}`);
+    
+    // Upload directly to Vercel Blob from the client
+    // This uses a client token and bypasses serverless function limits
+    const blob = await upload(blobPath, audioFile, {
+      access: 'public',
+      handleUploadUrl: `${API_BASE_URL}/api/upload-audio`,
     });
     
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error || `HTTP ${response.status}: ${response.statusText}`
-      );
+    console.log(`✅ Upload successful: ${blob.url}`);
+    
+    // Fetch the uploaded file to convert to base64 for processing
+    console.log(`Fetching uploaded audio from blob URL: ${blob.url}`);
+    const audioResponse = await fetch(blob.url);
+    if (!audioResponse.ok) {
+      throw new Error(`Failed to fetch uploaded audio from blob storage: ${audioResponse.statusText}`);
     }
     
-    const result = await response.json();
+    const audioBuffer = await audioResponse.arrayBuffer();
+    console.log(`Uploaded audio ArrayBuffer size: ${audioBuffer.byteLength} bytes`);
     
-    // Fetch the uploaded file from blob URL to convert to base64 for processing
-    if (result.success && result.audioUrl) {
-      console.log(`Fetching uploaded audio from blob URL: ${result.audioUrl}`);
-      const audioResponse = await fetch(result.audioUrl);
-      if (!audioResponse.ok) {
-        throw new Error(`Failed to fetch uploaded audio from blob storage: ${audioResponse.statusText}`);
-      }
-      
-      const audioBuffer = await audioResponse.arrayBuffer();
-      console.log(`Uploaded audio ArrayBuffer size: ${audioBuffer.byteLength} bytes`);
-      
-      // Convert ArrayBuffer to base64 efficiently
-      const audioBase64 = await new Promise<string>((resolve, reject) => {
-        const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
-        const reader = new FileReader();
-        reader.onload = () => {
-          const readerResult = reader.result as string;
-          if (!readerResult || typeof readerResult !== 'string') {
-            reject(new Error('FileReader returned invalid result'));
-            return;
-          }
-          const base64 = readerResult.split(',')[1];
-          if (!base64) {
-            reject(new Error('Failed to extract base64 from data URL'));
-            return;
-          }
-          resolve(base64);
-        };
-        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
-        reader.readAsDataURL(blob);
-      });
-      
-      return {
-        ...result,
-        audioData: audioBase64,
+    // Convert ArrayBuffer to base64 efficiently
+    const audioBase64 = await new Promise<string>((resolve, reject) => {
+      const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+      const reader = new FileReader();
+      reader.onload = () => {
+        const readerResult = reader.result as string;
+        if (!readerResult || typeof readerResult !== 'string') {
+          reject(new Error('FileReader returned invalid result'));
+          return;
+        }
+        const base64 = readerResult.split(',')[1];
+        if (!base64) {
+          reject(new Error('Failed to extract base64 from data URL'));
+          return;
+        }
+        resolve(base64);
       };
-    }
+      reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+      reader.readAsDataURL(audioBlob);
+    });
     
-    return result;
+    return {
+      audioData: audioBase64,
+      audioUrl: blob.url,
+      duration: 0, // Duration will be calculated during processing
+      title: audioFile.name,
+      success: true,
+      deliveryMethod: 'blob',
+      audioSize: `${(audioFile.size / (1024 * 1024)).toFixed(2)}MB`,
+      sessionId: sessionId,
+    };
   } catch (error) {
     console.error('Failed to upload audio:', error);
     return {
