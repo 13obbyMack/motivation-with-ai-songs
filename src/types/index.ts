@@ -11,6 +11,8 @@ export interface UserFormData {
   songTitle?: string;
   sponsor?: string;
   youtubeUrl: string;
+  audioSource?: 'youtube' | 'upload'; // New field to track audio source
+  uploadedAudioFile?: File; // New field for uploaded audio file
 }
 
 // API Keys
@@ -58,6 +60,26 @@ export interface ExtractAudioResponse {
   success: boolean;
   error?: string;
   sessionId?: string;
+  deliveryMethod?: string;
+  audioSize?: string;
+}
+
+export interface UploadAudioRequest {
+  audioData: string; // Base64 encoded audio data
+  filename: string;
+  sessionId: string;
+}
+
+export interface UploadAudioResponse {
+  audioData?: string; // Base64 encoded audio data
+  audioUrl?: string; // Blob URL for large files
+  duration: number;
+  title: string;
+  success: boolean;
+  error?: string;
+  sessionId?: string;
+  deliveryMethod?: string;
+  audioSize?: string;
 }
 
 export interface GenerateTextRequest {

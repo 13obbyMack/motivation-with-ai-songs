@@ -132,6 +132,8 @@ export function validateUserFormData(data: {
   selectedVoiceId: string;
   physicalActivity: string;
   youtubeUrl: string;
+  audioSource?: 'youtube' | 'upload';
+  uploadedAudioFile?: File;
 }): {
   isValid: boolean;
   errors: string[];
@@ -154,17 +156,38 @@ export function validateUserFormData(data: {
     errors.push('Physical activity is required');
   }
 
-  if (!data.youtubeUrl || data.youtubeUrl.trim().length === 0) {
-    errors.push('YouTube URL is required');
-  } else {
-    // Basic URL validation
-    try {
-      const url = new URL(data.youtubeUrl);
-      if (!url.hostname.includes('youtube.com') && !url.hostname.includes('youtu.be')) {
+  // Validate audio source
+  const audioSource = data.audioSource || 'youtube';
+  
+  if (audioSource === 'youtube') {
+    if (!data.youtubeUrl || data.youtubeUrl.trim().length === 0) {
+      errors.push('YouTube URL is required');
+    } else {
+      // Basic URL validation
+      try {
+        const url = new URL(data.youtubeUrl);
+        if (!url.hostname.includes('youtube.com') && !url.hostname.includes('youtu.be')) {
+          errors.push('Please provide a valid YouTube URL');
+        }
+      } catch {
         errors.push('Please provide a valid YouTube URL');
       }
-    } catch {
-      errors.push('Please provide a valid YouTube URL');
+    }
+  } else if (audioSource === 'upload') {
+    if (!data.uploadedAudioFile) {
+      errors.push('Please upload an MP3 file');
+    } else {
+      // Validate file type
+      if (!data.uploadedAudioFile.type.includes('audio/mpeg') && 
+          !data.uploadedAudioFile.name.toLowerCase().endsWith('.mp3')) {
+        errors.push('Please upload a valid MP3 file');
+      }
+      
+      // Validate file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024;
+      if (data.uploadedAudioFile.size > maxSize) {
+        errors.push('File size must be less than 50MB');
+      }
     }
   }
 

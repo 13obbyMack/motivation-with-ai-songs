@@ -42,6 +42,108 @@ async function apiRequest<T>(
 }
 
 /**
+ * Upload custom audio file
+ */
+export async function uploadAudio(audioFile: File, sessionId?: string): Promise<{
+  audioData?: string;
+  audioUrl?: string;
+  duration: number;
+  title: string;
+  success: boolean;
+  error?: string;
+  deliveryMethod?: string;
+  audioSize?: string;
+  sessionId?: string;
+}> {
+  // Convert file to base64
+  const audioBase64 = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      if (!result || typeof result !== 'string') {
+        reject(new Error('FileReader returned invalid result'));
+        return;
+      }
+      const base64 = result.split(',')[1];
+      if (!base64) {
+        reject(new Error('Failed to extract base64 from data URL'));
+        return;
+      }
+      resolve(base64);
+    };
+    reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+    reader.readAsDataURL(audioFile);
+  });
+
+  const response = await apiRequest<{
+    audioUrl?: string;
+    duration: number;
+    title: string;
+    success: boolean;
+    error?: string;
+    deliveryMethod?: string;
+    audioSize?: string;
+    sessionId?: string;
+  }>("/api/upload-audio", {
+    method: "POST",
+    body: JSON.stringify({ 
+      audioData: audioBase64, 
+      filename: audioFile.name,
+      sessionId 
+    }),
+  });
+
+  // All responses should be blob URLs now
+  if (response.success && response.audioUrl) {
+    try {
+      console.log(`Fetching uploaded audio from blob URL: ${response.audioUrl}`);
+      const audioResponse = await fetch(response.audioUrl);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to fetch uploaded audio from blob storage: ${audioResponse.statusText}`);
+      }
+      
+      const audioBuffer = await audioResponse.arrayBuffer();
+      console.log(`Uploaded audio ArrayBuffer size: ${audioBuffer.byteLength} bytes`);
+      
+      // Convert ArrayBuffer to base64 efficiently
+      const fetchedAudioBase64 = await new Promise<string>((resolve, reject) => {
+        const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (!result || typeof result !== 'string') {
+            reject(new Error('FileReader returned invalid result'));
+            return;
+          }
+          const base64 = result.split(',')[1];
+          if (!base64) {
+            reject(new Error('Failed to extract base64 from data URL'));
+            return;
+          }
+          resolve(base64);
+        };
+        reader.onerror = () => reject(reader.error || new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
+      
+      return {
+        ...response,
+        audioData: fetchedAudioBase64,
+      };
+    } catch (error) {
+      console.error('Failed to fetch uploaded audio from blob URL:', error);
+      return {
+        ...response,
+        success: false,
+        error: `Failed to fetch uploaded audio from blob storage: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  }
+
+  return response;
+}
+
+/**
  * Extract audio from YouTube URL
  */
 export async function extractAudio(youtubeUrl: string, youtubeCookies?: string, sessionId?: string): Promise<{

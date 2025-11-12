@@ -10,12 +10,17 @@ import { getTTSSettings } from '@/utils/elevenlabs';
 import { Card } from './ui/Card';
 
 
-const STEP_DESCRIPTIONS = {
-  [ProcessingStep.DOWNLOADING_AUDIO]: 'Extracting audio from YouTube...',
-  [ProcessingStep.GENERATING_TEXT]: 'Generating motivational content...',
-  [ProcessingStep.GENERATING_SPEECH]: 'Converting text to speech...',
-  [ProcessingStep.SPLICING_AUDIO]: 'Merging audio tracks...',
-  [ProcessingStep.FINALIZING]: 'Finalizing your motivational song...',
+const getStepDescription = (step: ProcessingStep, audioSource?: 'youtube' | 'upload') => {
+  const descriptions = {
+    [ProcessingStep.DOWNLOADING_AUDIO]: audioSource === 'upload' 
+      ? 'Uploading your audio file...' 
+      : 'Extracting audio from YouTube...',
+    [ProcessingStep.GENERATING_TEXT]: 'Generating motivational content...',
+    [ProcessingStep.GENERATING_SPEECH]: 'Converting text to speech...',
+    [ProcessingStep.SPLICING_AUDIO]: 'Merging audio tracks...',
+    [ProcessingStep.FINALIZING]: 'Finalizing your motivational song...',
+  };
+  return descriptions[step];
 };
 
 export const AudioProcessor: React.FC<AudioProcessorProps> = ({
@@ -52,7 +57,7 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
     onProgressUpdate({
       currentStep: step,
       progress: Math.round(totalProgress),
-      message: STEP_DESCRIPTIONS[step],
+      message: getStepDescription(step, formData.audioSource),
     });
   };
 
@@ -80,16 +85,30 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
     setIsProcessing(true);
     
     try {
-      // Step 1: Extract audio
+      // Step 1: Get audio (either from YouTube or uploaded file)
       setCurrentStep(ProcessingStep.DOWNLOADING_AUDIO);
       updateProgress(ProcessingStep.DOWNLOADING_AUDIO, 0);
       
-      const audioResponse = await extractAudio(formData.youtubeUrl, apiKeys.youtubeCookies, sessionId);
-      if (!audioResponse.success) {
-        throw new Error(audioResponse.error || 'Failed to extract audio');
+      let audioResponse;
+      const audioSource = formData.audioSource || 'youtube';
+      
+      if (audioSource === 'upload' && formData.uploadedAudioFile) {
+        // Upload custom audio file
+        const { uploadAudio } = await import('@/utils/api');
+        audioResponse = await uploadAudio(formData.uploadedAudioFile, sessionId);
+        if (!audioResponse.success) {
+          throw new Error(audioResponse.error || 'Failed to upload audio file');
+        }
+        console.log(`Custom audio uploaded via: ${audioResponse.deliveryMethod}, size: ${audioResponse.audioSize || 'unknown'}`);
+      } else {
+        // Extract audio from YouTube
+        audioResponse = await extractAudio(formData.youtubeUrl, apiKeys.youtubeCookies, sessionId);
+        if (!audioResponse.success) {
+          throw new Error(audioResponse.error || 'Failed to extract audio');
+        }
+        console.log(`YouTube audio extracted via: ${audioResponse.deliveryMethod}, size: ${audioResponse.audioSize || 'unknown'}`);
       }
       
-      console.log(`YouTube audio extracted via: ${audioResponse.deliveryMethod}, size: ${audioResponse.audioSize || 'unknown'}`);
       updateProgress(ProcessingStep.DOWNLOADING_AUDIO, 100);
 
       // Step 2: Generate text
@@ -313,7 +332,7 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
           <div>
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-medium text-foreground">
-                {STEP_DESCRIPTIONS[currentStep]}
+                {getStepDescription(currentStep, formData.audioSource)}
               </span>
               <span className="text-sm text-muted-foreground">{progress}%</span>
             </div>
@@ -327,7 +346,7 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
 
           <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
             <p className="text-primary text-sm">
-              <strong>Current Step:</strong> {STEP_DESCRIPTIONS[currentStep]}
+              <strong>Current Step:</strong> {getStepDescription(currentStep, formData.audioSource)}
             </p>
             <p className="text-primary/80 text-sm mt-1">
               Please keep this page open while processing.

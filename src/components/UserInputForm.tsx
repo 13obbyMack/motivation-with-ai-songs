@@ -26,14 +26,39 @@ export const UserInputForm: React.FC<UserInputFormProps> = ({
     customInstructions: initialData.customInstructions || '',
     songTitle: initialData.songTitle || '',
     sponsor: initialData.sponsor || '',
-    youtubeUrl: initialData.youtubeUrl || ''
+    youtubeUrl: initialData.youtubeUrl || '',
+    audioSource: initialData.audioSource || 'youtube',
+    uploadedAudioFile: initialData.uploadedAudioFile
   });
 
   const [errors, setErrors] = useState<string[]>([]);
+  const [uploadedFileName, setUploadedFileName] = useState<string>('');
 
-  const handleInputChange = (field: keyof UserFormData, value: string | ElevenLabsModel) => {
+  const handleInputChange = (field: keyof UserFormData, value: string | ElevenLabsModel | File) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setErrors([]); // Clear errors when user types
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.includes('audio/mpeg') && !file.name.toLowerCase().endsWith('.mp3')) {
+        setErrors(['Please upload a valid MP3 file']);
+        return;
+      }
+      
+      // Validate file size (max 50MB)
+      const maxSize = 50 * 1024 * 1024;
+      if (file.size > maxSize) {
+        setErrors(['File size must be less than 50MB']);
+        return;
+      }
+      
+      setUploadedFileName(file.name);
+      handleInputChange('uploadedAudioFile', file);
+      setErrors([]);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -122,18 +147,83 @@ export const UserInputForm: React.FC<UserInputFormProps> = ({
           required
         />
 
-        {/* YouTube URL Field */}
-        <Input
-          label="YouTube Music URL"
-          id="youtubeUrl"
-          type="url"
-          value={formData.youtubeUrl}
-          onChange={(e) => handleInputChange('youtubeUrl', e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=..."
-          disabled={isLoading}
-          required
-          helperText="Paste the URL of the YouTube video with the music you want to use"
-        />
+        {/* Audio Source Selection */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-3">
+            Background Music Source *
+          </label>
+          <div className="flex gap-4 mb-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="audioSource"
+                value="youtube"
+                checked={formData.audioSource === 'youtube'}
+                onChange={(e) => handleInputChange('audioSource', e.target.value as 'youtube' | 'upload')}
+                disabled={isLoading}
+                className="w-4 h-4 text-primary"
+              />
+              <span className="text-sm text-foreground">YouTube URL</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="audioSource"
+                value="upload"
+                checked={formData.audioSource === 'upload'}
+                onChange={(e) => handleInputChange('audioSource', e.target.value as 'youtube' | 'upload')}
+                disabled={isLoading}
+                className="w-4 h-4 text-primary"
+              />
+              <span className="text-sm text-foreground">Upload MP3 File</span>
+            </label>
+          </div>
+
+          {/* YouTube URL Field */}
+          {formData.audioSource === 'youtube' && (
+            <Input
+              label=""
+              id="youtubeUrl"
+              type="url"
+              value={formData.youtubeUrl}
+              onChange={(e) => handleInputChange('youtubeUrl', e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              disabled={isLoading}
+              required
+              helperText="Paste the URL of the YouTube video with the music you want to use"
+            />
+          )}
+
+          {/* File Upload Field */}
+          {formData.audioSource === 'upload' && (
+            <div>
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor="audioFile"
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg font-medium hover:bg-secondary/90 transition-colors cursor-pointer"
+                >
+                  Choose MP3 File
+                </label>
+                <input
+                  type="file"
+                  id="audioFile"
+                  accept="audio/mpeg,.mp3"
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
+                  className="hidden"
+                />
+                {uploadedFileName && (
+                  <span className="text-sm text-muted-foreground">
+                    {uploadedFileName}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Upload your own MP3 file (max 50MB) to use as background music
+              </p>
+            </div>
+          )}
+        </div>
 
         {/* Custom Instructions Field */}
         <Textarea
