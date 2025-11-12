@@ -51,7 +51,7 @@ export const UserInputForm: React.FC<UserInputFormProps> = ({
       // Validate file size (max 50MB)
       const maxSize = 50 * 1024 * 1024;
       if (file.size > maxSize) {
-        setErrors(['File size must be less than 50MB']);
+        setErrors([`File size must be less than 50MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`]);
         return;
       }
       

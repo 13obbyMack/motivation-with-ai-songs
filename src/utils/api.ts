@@ -42,7 +42,7 @@ async function apiRequest<T>(
 }
 
 /**
- * Upload custom audio file directly to Vercel Blob using client-side upload
+ * Upload custom audio file directly to Vercel Blob storage (up to 50MB)
  */
 export async function uploadAudio(audioFile: File, sessionId?: string): Promise<{
   audioData?: string;
@@ -58,19 +58,19 @@ export async function uploadAudio(audioFile: File, sessionId?: string): Promise<
   try {
     console.log(`Uploading ${audioFile.size} bytes (${(audioFile.size / (1024 * 1024)).toFixed(2)}MB) directly to blob storage`);
     
-    // Use Vercel Blob client-side upload
+    // Use @vercel/blob/client for direct browser-to-blob upload
     const { upload } = await import('@vercel/blob/client');
     
     // Create a unique filename with session-based folder structure
     const timestamp = Date.now();
     const sanitizedFilename = audioFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const blobPath = `custom-audio/${sessionId}/${sanitizedFilename}-${timestamp}.mp3`;
+    const pathname = `custom-audio/${sessionId}/${sanitizedFilename}-${timestamp}.mp3`;
     
-    console.log(`Uploading to blob path: ${blobPath}`);
+    console.log(`Uploading to blob storage: ${pathname}`);
     
-    // Upload directly to Vercel Blob from the client
-    // This uses a client token and bypasses serverless function limits
-    const blob = await upload(blobPath, audioFile, {
+    // Upload directly to Vercel Blob from the browser
+    // This bypasses the serverless function's 4.5MB limit
+    const blob = await upload(pathname, audioFile, {
       access: 'public',
       handleUploadUrl: `${API_BASE_URL}/api/upload-audio`,
     });
