@@ -28,13 +28,12 @@ Users can now upload custom MP3 files as background music instead of using YouTu
 
 ```
 POST /api/upload-audio
+Content-Type: multipart/form-data
 
-Request:
-{
-  "audioData": "base64_encoded_mp3",
-  "filename": "my-song.mp3",
-  "sessionId": "abc123"
-}
+Form Fields:
+- audioFile: File (MP3 binary data)
+- filename: string
+- sessionId: string
 
 Response:
 {

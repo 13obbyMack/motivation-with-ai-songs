@@ -1,10 +1,11 @@
 from http.server import BaseHTTPRequestHandler
 import json
-import base64
 import time
 import hashlib
 import os
-import tempfile
+import re
+import cgi
+from io import BytesIO
 
 # Try to import vercel_blob, but handle gracefully if not available
 try:
@@ -29,35 +30,49 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            # Parse request body
-            content_length = int(self.headers['Content-Length'])
+            # Parse multipart/form-data
+            content_type = self.headers.get('Content-Type', '')
+            
+            if not content_type.startswith('multipart/form-data'):
+                self.send_error_response(400, 'Content-Type must be multipart/form-data')
+                return
             
             # Check file size before reading
+            content_length = int(self.headers.get('Content-Length', 0))
             if content_length > MAX_FILE_SIZE:
                 self.send_error_response(413, 
                     f'File too large. Maximum size is {MAX_FILE_SIZE / (1024 * 1024):.0f}MB')
                 return
             
-            post_data = self.rfile.read(content_length)
-            data = json.loads(post_data.decode('utf-8'))
+            # Parse the multipart form data
+            form = cgi.FieldStorage(
+                fp=self.rfile,
+                headers=self.headers,
+                environ={
+                    'REQUEST_METHOD': 'POST',
+                    'CONTENT_TYPE': content_type,
+                }
+            )
             
-            audio_base64 = data.get('audioData')
-            filename = data.get('filename', 'uploaded-audio.mp3')
-            session_id = data.get('sessionId')
-            
-            if not audio_base64:
-                self.send_error_response(400, 'Audio data is required')
+            # Get the uploaded file
+            if 'audioFile' not in form:
+                self.send_error_response(400, 'No audio file provided')
                 return
+            
+            file_item = form['audioFile']
+            if not file_item.file:
+                self.send_error_response(400, 'Invalid file upload')
+                return
+            
+            # Read the file data
+            audio_data = file_item.file.read()
+            
+            # Get filename and session ID
+            filename = form.getvalue('filename', 'uploaded-audio.mp3')
+            session_id = form.getvalue('sessionId')
             
             if not session_id:
                 self.send_error_response(400, 'Session ID is required')
-                return
-            
-            # Decode base64 audio data
-            try:
-                audio_data = base64.b64decode(audio_base64)
-            except Exception as e:
-                self.send_error_response(400, f'Invalid base64 audio data: {str(e)}')
                 return
             
             audio_size_mb = len(audio_data) / (1024 * 1024)

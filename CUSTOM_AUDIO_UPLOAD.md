@@ -27,7 +27,7 @@ Users can now choose between two audio sources:
 
 This serverless function handles custom MP3 file uploads with the following features:
 
-- Base64 audio data decoding
+- Multipart/form-data file upload (avoids base64 overhead and payload size limits)
 - MP3 format validation (checks for ID3 tags and MP3 frame sync)
 - File size validation (max 50MB)
 - Vercel Blob storage integration
@@ -35,13 +35,25 @@ This serverless function handles custom MP3 file uploads with the following feat
 
 **Endpoint**: `/api/upload-audio`
 
-**Request Format**:
-```json
-{
-  "audioData": "base64_encoded_mp3_data",
-  "filename": "my-audio.mp3",
-  "sessionId": "unique_session_id"
-}
+**Request Format**: `multipart/form-data`
+```
+POST /api/upload-audio
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
+
+------WebKitFormBoundary...
+Content-Disposition: form-data; name="audioFile"; filename="my-audio.mp3"
+Content-Type: audio/mpeg
+
+[binary MP3 data]
+------WebKitFormBoundary...
+Content-Disposition: form-data; name="filename"
+
+my-audio.mp3
+------WebKitFormBoundary...
+Content-Disposition: form-data; name="sessionId"
+
+unique_session_id
+------WebKitFormBoundary...--
 ```
 
 **Response Format**:
