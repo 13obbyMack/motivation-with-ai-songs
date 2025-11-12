@@ -20,10 +20,6 @@
     "api/splice-audio.py": {
       "maxDuration": 240,
       "memory": 1024
-    },
-    "api/upload-audio.py": {
-      "maxDuration": 60,
-      "memory": 512
     }
   },
   "framework": "nextjs",

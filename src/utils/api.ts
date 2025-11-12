@@ -69,10 +69,10 @@ export async function uploadAudio(audioFile: File, sessionId?: string): Promise<
     console.log(`Uploading to blob storage: ${pathname}`);
     
     // Upload directly to Vercel Blob from the browser
-    // This bypasses the serverless function's 4.5MB limit
+    // The handleUploadUrl points to our Next.js API route (not Python)
     const blob = await upload(pathname, audioFile, {
       access: 'public',
-      handleUploadUrl: `${API_BASE_URL}/api/upload-audio`,
+      handleUploadUrl: '/api/upload-audio', // Next.js API route
     });
     
     console.log(`✅ Upload successful: ${blob.url}`);
