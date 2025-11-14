@@ -1,6 +1,6 @@
 # Install yt-dlp with default extras (includes JS components for YouTube)
 # Using [default] pulls in yt-dlp-ejs and other necessary JS handling components
-yt-dlp[default]>=2025.10.22
+yt-dlp[default]>=2025.11.12
 openai==2.7.1
 requests==2.32.5
 vercel_blob==0.4.2
