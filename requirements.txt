@@ -5,3 +5,4 @@ openai==2.7.1
 requests==2.32.5
 vercel_blob==0.4.2
 av==16.0.1
+numpy==2.3.4

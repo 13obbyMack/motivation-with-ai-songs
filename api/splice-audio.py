@@ -172,9 +172,15 @@ class handler(BaseHTTPRequestHandler):
                         if has_multiple_chunks:
                             combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
                             self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
-                            self.splice_intro(combined_speech_path, original_path, output_path)
+                            # Apply 3dB volume gain to combined speech
+                            gained_speech_path = os.path.join(temp_dir, 'gained_combined_speech.mp3')
+                            self._apply_volume_gain(combined_speech_path, gained_speech_path, 3.0)
+                            self.splice_intro(gained_speech_path, original_path, output_path)
                         else:
-                            self.splice_intro(speech_paths[0], original_path, output_path)
+                            # Apply 3dB volume gain to single speech chunk
+                            gained_speech_path = os.path.join(temp_dir, 'gained_speech.mp3')
+                            self._apply_volume_gain(speech_paths[0], gained_speech_path, 3.0)
+                            self.splice_intro(gained_speech_path, original_path, output_path)
                     else:
                         # Default behavior - use distributed if multiple chunks, otherwise intro
                         if has_multiple_chunks:
@@ -182,7 +188,10 @@ class handler(BaseHTTPRequestHandler):
                             self.splice_distributed_pyav(speech_paths, original_path, output_path, original_duration, temp_dir)
                         else:
                             print("Default: Using intro splicing with single chunk")
-                            self.splice_intro(speech_paths[0], original_path, output_path)
+                            # Apply 3dB volume gain to single speech chunk
+                            gained_speech_path = os.path.join(temp_dir, 'gained_speech.mp3')
+                            self._apply_volume_gain(speech_paths[0], gained_speech_path, 3.0)
+                            self.splice_intro(gained_speech_path, original_path, output_path)
                 except Exception as splice_error:
                     print(f"❌ Advanced splicing failed: {str(splice_error)}")
                     print("🔄 Falling back to simple concatenation...")
@@ -190,9 +199,15 @@ class handler(BaseHTTPRequestHandler):
                     if has_multiple_chunks:
                         combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
                         self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
-                        self.splice_simple_concat(combined_speech_path, original_path, output_path)
+                        # Apply 3dB volume gain to combined speech
+                        gained_speech_path = os.path.join(temp_dir, 'gained_combined_speech.mp3')
+                        self._apply_volume_gain(combined_speech_path, gained_speech_path, 3.0)
+                        self.splice_simple_concat(gained_speech_path, original_path, output_path)
                     else:
-                        self.splice_simple_concat(speech_paths[0], original_path, output_path)
+                        # Apply 3dB volume gain to single speech chunk
+                        gained_speech_path = os.path.join(temp_dir, 'gained_speech.mp3')
+                        self._apply_volume_gain(speech_paths[0], gained_speech_path, 3.0)
+                        self.splice_simple_concat(gained_speech_path, original_path, output_path)
                 
                 # Apply music duration limit if specified
                 if music_duration:
@@ -450,12 +465,16 @@ class handler(BaseHTTPRequestHandler):
             # Split music into segments WITHOUT skipping any content
             music_segments = self._split_music_for_insertion(music_path, insertion_points, temp_dir)
             
-            # Convert all speech chunks to standard format
+            # Convert all speech chunks to standard format AND apply 3dB volume gain
             converted_speech = []
             for i, chunk_path in enumerate(speech_chunks):
                 temp_speech = os.path.join(temp_dir, f"temp_speech_{i}.mp3")
                 self._convert_to_standard_format(chunk_path, temp_speech)
-                converted_speech.append(temp_speech)
+                
+                # Apply 3dB volume gain to match Colab implementation
+                gained_speech = os.path.join(temp_dir, f"gained_speech_{i}.mp3")
+                self._apply_volume_gain(temp_speech, gained_speech, 3.0)
+                converted_speech.append(gained_speech)
             
             # Interleave music segments and speech chunks at calculated insertion points
             print("Creating final audio with evenly distributed speech chunks...")
@@ -509,6 +528,105 @@ class handler(BaseHTTPRequestHandler):
         except Exception as e:
             print(f"❌ PyAV distributed splicing failed: {str(e)}")
             raise
+    
+    def _apply_volume_gain(self, input_path, output_path, gain_db):
+        """Apply volume gain in dB to audio file using PyAV (emulates Colab: audio + 3)"""
+        try:
+            import numpy as np
+            
+            print(f"Applying {gain_db}dB volume gain to speech audio...")
+            
+            # Convert dB to linear gain factor
+            # Formula: linear_gain = 10^(dB/20)
+            # For 3dB: 10^(3/20) ≈ 1.412
+            gain_factor = 10 ** (gain_db / 20.0)
+            print(f"Gain factor: {gain_factor:.3f}x")
+            
+            input_container = av.open(input_path)
+            output_container = av.open(output_path, mode='w')
+            
+            # Get input audio stream
+            input_stream = input_container.streams.audio[0]
+            
+            # Create output stream with same settings
+            output_stream = output_container.add_stream('mp3', rate=44100)
+            output_stream.bit_rate = 128000
+            
+            # Create resampler if needed
+            resampler = None
+            if input_stream.sample_rate != 44100 or input_stream.layout.name != 'stereo':
+                resampler = av.audio.resampler.AudioResampler(
+                    format='s16',
+                    layout='stereo',
+                    rate=44100
+                )
+            
+            # Process frames and apply gain
+            frames_processed = 0
+            for frame in input_container.decode(input_stream):
+                # Resample if needed
+                if resampler:
+                    resampled_frames = resampler.resample(frame)
+                    frames_to_process = resampled_frames
+                else:
+                    frames_to_process = [frame]
+                
+                for audio_frame in frames_to_process:
+                    # Convert frame to numpy array for gain processing
+                    audio_array = audio_frame.to_ndarray()
+                    
+                    # Apply gain (multiply by gain factor)
+                    gained_array = audio_array * gain_factor
+                    
+                    # Clip to prevent distortion (keep within int16 range)
+                    gained_array = np.clip(gained_array, -32768, 32767)
+                    
+                    # Convert back to audio frame
+                    gained_frame = av.AudioFrame.from_ndarray(
+                        gained_array.astype(np.int16),
+                        format='s16',
+                        layout='stereo'
+                    )
+                    gained_frame.sample_rate = 44100
+                    
+                    # Encode and write
+                    for packet in output_stream.encode(gained_frame):
+                        output_container.mux(packet)
+                    
+                    frames_processed += 1
+            
+            # Flush resampler if used
+            if resampler:
+                remaining_frames = resampler.resample(None)
+                for frame in remaining_frames:
+                    # Apply gain to remaining frames
+                    audio_array = frame.to_ndarray()
+                    gained_array = np.clip(audio_array * gain_factor, -32768, 32767)
+                    gained_frame = av.AudioFrame.from_ndarray(
+                        gained_array.astype(np.int16),
+                        format='s16',
+                        layout='stereo'
+                    )
+                    gained_frame.sample_rate = 44100
+                    
+                    for packet in output_stream.encode(gained_frame):
+                        output_container.mux(packet)
+            
+            # Flush encoder
+            for packet in output_stream.encode():
+                output_container.mux(packet)
+            
+            input_container.close()
+            output_container.close()
+            
+            print(f"✅ Volume gain applied: {frames_processed} frames processed with +{gain_db}dB")
+            
+        except Exception as e:
+            print(f"❌ Volume gain failed: {str(e)}")
+            # Fallback: copy original file without gain
+            print("Fallback: using original audio without gain adjustment")
+            import shutil
+            shutil.copy2(input_path, output_path)
     
     def _convert_to_standard_format(self, input_path, output_path):
         """Convert audio file to standard MP3 format using PyAV with error recovery"""
