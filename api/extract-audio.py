@@ -82,17 +82,25 @@ def download_youtube_audio(url: str, output_path: str, cookies_content: str = No
     }
     
     # Configure QuickJS runtime for YouTube JS challenges
-    # The js_runtime parameter is passed to the YouTube extractor
+    # The js_runtimes parameter enables QuickJS for solving YouTube's JS challenges
+    # Format: {'runtime_name': {'path': '/path/to/binary'}} or {'runtime_name': {}} for auto-detect
+    # 
+    # Alternative: You can also use a yt-dlp config file (~/.config/yt-dlp/config) with:
+    #   --js-runtimes quickjs:/path/to/qjs
+    # However, for serverless functions, the Python API approach is more reliable.
     if qjs_path:
-        if 'extractor_args' not in base_opts:
-            base_opts['extractor_args'] = {}
-        if 'youtube' not in base_opts['extractor_args']:
-            base_opts['extractor_args']['youtube'] = {}
-        
-        # Set the JS runtime path for YouTube extractor
-        # This will be used when YouTube requires solving JS challenges
-        base_opts['extractor_args']['youtube']['js_runtime'] = f'quickjs:{qjs_path}'
-        print(f"   Configured yt-dlp to use QuickJS for JS challenges")
+        base_opts['js_runtimes'] = {
+            'quickjs': {'path': qjs_path}
+        }
+        print(f"   Configured yt-dlp to use QuickJS runtime at: {qjs_path}")
+    else:
+        # Try to enable deno as fallback (enabled by default but may not be available)
+        base_opts['js_runtimes'] = {
+            'deno': {},
+            'node': {},
+            'quickjs': {}
+        }
+        print(f"   QuickJS not found, trying default runtimes (deno/node/quickjs)")
     
     # Better format selection to avoid SABR streaming issues
     # Use multiple format fallbacks with audio-only preference
