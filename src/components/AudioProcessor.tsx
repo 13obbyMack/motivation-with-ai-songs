@@ -139,7 +139,7 @@ export const AudioProcessor: React.FC<AudioProcessorProps> = ({
           apiKeys.elevenlabsKey, 
           chunk, 
           selectedVoiceId,
-          getTTSSettings(formData.selectedModelId), // use model-specific settings
+          formData.voiceSettings || getTTSSettings(formData.selectedModelId), // prefer user settings
           formData.selectedModelId, // use selected model
           sessionId
         );

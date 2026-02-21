@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { UserFormData, UserInputFormProps, ElevenLabsModel } from '@/types';
+import { UserFormData, UserInputFormProps, ElevenLabsModel, TTSSettings } from '@/types';
 import { validateUserFormData } from '@/utils/validation';
 import { VoiceSelector } from './VoiceSelector';
 import { ModelSelector } from './ModelSelector';
-import { selectOptimalModel } from '@/utils/elevenlabs';
+import { VoiceSettingsPanel } from './VoiceSettingsPanel';
+import { selectOptimalModel, getBaselineTTSSettings } from '@/utils/elevenlabs';
 import { Card } from './ui/Card';
 import { Input } from './ui/Input';
 import { Textarea } from './ui/Textarea';
@@ -17,26 +18,37 @@ export const UserInputForm: React.FC<UserInputFormProps> = ({
   initialData = {},
   elevenlabsApiKey = ''
 }) => {
+  const defaultModelId = initialData.selectedModelId || selectOptimalModel('quality');
   const [formData, setFormData] = useState<UserFormData>({
     name: initialData.name || '',
     characterPrompt: initialData.characterPrompt || '',
     selectedVoiceId: initialData.selectedVoiceId || '',
-    selectedModelId: initialData.selectedModelId || selectOptimalModel('quality'),
+    selectedModelId: defaultModelId,
     physicalActivity: initialData.physicalActivity || '',
     customInstructions: initialData.customInstructions || '',
     songTitle: initialData.songTitle || '',
     sponsor: initialData.sponsor || '',
     youtubeUrl: initialData.youtubeUrl || '',
     audioSource: initialData.audioSource || 'youtube',
-    uploadedAudioFile: initialData.uploadedAudioFile
+    uploadedAudioFile: initialData.uploadedAudioFile,
+    voiceSettings: initialData.voiceSettings || getBaselineTTSSettings(defaultModelId),
   });
 
   const [errors, setErrors] = useState<string[]>([]);
   const [uploadedFileName, setUploadedFileName] = useState<string>('');
 
-  const handleInputChange = (field: keyof UserFormData, value: string | ElevenLabsModel | File) => {
+  const handleInputChange = (field: keyof UserFormData, value: string | ElevenLabsModel | File | TTSSettings) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     setErrors([]); // Clear errors when user types
+  };
+
+  const handleModelChange = (modelId: ElevenLabsModel) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedModelId: modelId,
+      voiceSettings: getBaselineTTSSettings(modelId),
+    }));
+    setErrors([]);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,10 +128,18 @@ export const UserInputForm: React.FC<UserInputFormProps> = ({
         {/* Model Selection Field */}
         <div>
           <ModelSelector
-            onModelSelected={(modelId) => handleInputChange('selectedModelId', modelId)}
+            onModelSelected={handleModelChange}
             selectedModel={formData.selectedModelId}
           />
         </div>
+
+        {/* Voice Settings */}
+        <VoiceSettingsPanel
+          modelId={formData.selectedModelId}
+          settings={formData.voiceSettings || {}}
+          onChange={(settings) => handleInputChange('voiceSettings', settings)}
+          disabled={isLoading}
+        />
 
         {/* Voice Selection Field */}
         <div>

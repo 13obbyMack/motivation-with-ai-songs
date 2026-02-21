@@ -38,9 +38,8 @@ def get_model_specific_settings(model_id: str, base_settings: dict) -> dict:
     """Get model-specific TTS settings with proper validation"""
     settings = base_settings.copy()
     
-    # ElevenLabs v3 model requires specific stability values: 0.0, 0.5, or 1.0
+    # ElevenLabs v3 model only supports stability (discrete values: 0.0, 0.5, or 1.0)
     if model_id == 'eleven_v3':
-        # Map any stability value to the nearest valid v3 value
         current_stability = settings.get('stability', 0.3)
         if current_stability <= 0.25:
             settings['stability'] = 0.0  # Creative
@@ -48,9 +47,17 @@ def get_model_specific_settings(model_id: str, base_settings: dict) -> dict:
             settings['stability'] = 0.5  # Natural
         else:
             settings['stability'] = 1.0  # Robust
-        
-        # For motivational content, use Creative mode (0.0) for maximum expressiveness
-        settings['stability'] = 0.0
+        # Strip all unsupported params — v3 only accepts stability
+        return {'stability': settings['stability']}
+    
+    # Clamp speed to valid range (0.7 – 1.2) if provided
+    if 'speed' in settings:
+        settings['speed'] = max(0.7, min(1.2, float(settings['speed'])))
+    
+    # Remove unsupported params for Flash/Turbo models
+    if model_id in ('eleven_flash_v2_5', 'eleven_turbo_v2_5'):
+        settings.pop('style', None)
+        settings.pop('use_speaker_boost', None)
     
     return settings
 

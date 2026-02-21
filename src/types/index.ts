@@ -13,6 +13,7 @@ export interface UserFormData {
   youtubeUrl: string;
   audioSource?: 'youtube' | 'upload'; // New field to track audio source
   uploadedAudioFile?: File; // New field for uploaded audio file
+  voiceSettings?: TTSSettings; // User-configured voice settings
 }
 
 // API Keys
@@ -158,6 +159,7 @@ export interface TTSSettings {
   similarity_boost?: number;
   style?: number;
   use_speaker_boost?: boolean;
+  speed?: number;
 }
 
 // ElevenLabs Model Options
