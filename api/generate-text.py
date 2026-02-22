@@ -19,55 +19,52 @@ def create_user_prompt(user_data: dict) -> str:
     sponsor = user_data.get('sponsor')
     custom_instructions = user_data.get('customInstructions')
     
-    prompt = f"Create a powerful, personalized motivational message for {name} who is engaged in {physical_activity}."
+    prompt = f"Create 5 short, self-contained motivational messages for {name} who is engaged in {physical_activity}."
     
     if song_title:
-        prompt += f" They are listening to \"{song_title}\" during their activity."
+        prompt += f" They are listening to {song_title} during their activity."
     
     if sponsor:
-        prompt += f" Include a natural mention of {sponsor} as a supporter of their journey."
-    
+        prompt += f" Mention this song is sponsored by {sponsor} like a radio personality would in one of the messages."
+
     if custom_instructions:
         prompt += f" Additional instructions: {custom_instructions}"
     
     prompt += f"""
 
-The message should:
-- Be 2-3 minutes of spoken content (approximately 300-450 words)
-- Be intensely personal and motivating
-- Reference their specific activity ({physical_activity})
-- Push them to overcome mental barriers and physical limitations
-- Include specific actionable advice they can apply immediately
-- Build to an emotional crescendo that drives action
-- Feel like you're speaking directly to them in the moment
+Each message must:
+- Be completely self-contained and impactful on its own (60-90 words each)
+- Make sense when heard at ANY point during the activity — beginning, middle, or end
+- NOT reference "earlier" or "now" or imply a sequence or progression
+- Focus on a different motivational angle: e.g. mental toughness, physical form, purpose, identity, pushing limits
+- Feel like a direct, in-the-moment callout to {name} during {physical_activity}
+- Be raw, authentic, and punchy — no filler
 
-Make it raw, authentic, and powerful. This person needs to hear exactly what will push them to their next level."""
+Format your response as exactly 5 separate paragraphs with a blank line between each. No numbering, no headers."""
     
     return prompt
 
 def chunk_text(text: str) -> list:
-    """Chunk text into smaller segments for TTS"""
-    sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
-    chunks = []
-    current_chunk = ""
-    current_word_count = 0
-    target_words = 100  # Reduced from 150 to create smaller audio files
-    
-    for sentence in sentences:
-        sentence_words = len(sentence.split())
-        
-        if current_word_count + sentence_words > target_words and current_chunk:
+    """Split pre-chunked paragraphs from LLM output"""
+    chunks = [p.strip() for p in text.split('\n\n') if p.strip()]
+    # Fallback to sentence splitting if paragraphs aren't distinct
+    if len(chunks) <= 1:
+        sentences = [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+        chunks = []
+        current_chunk = ""
+        current_word_count = 0
+        for sentence in sentences:
+            word_count = len(sentence.split())
+            if current_word_count + word_count > 80 and current_chunk:
+                chunks.append(current_chunk.strip())
+                current_chunk = sentence
+                current_word_count = word_count
+            else:
+                current_chunk += (". " if current_chunk else "") + sentence
+                current_word_count += word_count
+        if current_chunk.strip():
             chunks.append(current_chunk.strip())
-            current_chunk = sentence
-            current_word_count = sentence_words
-        else:
-            current_chunk += (". " if current_chunk else "") + sentence
-            current_word_count += sentence_words
-    
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
-    
-    return [chunk for chunk in chunks if chunk]
+    return chunks
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
