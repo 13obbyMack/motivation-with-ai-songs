@@ -29,6 +29,12 @@ const Layout: React.FC<LayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Ambient background for frosted glass effect */}
+      <div className="fixed inset-0 -z-10 pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-success/15 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-warning/10 rounded-full blur-3xl" />
+      </div>
       {/* Header */}
       {showHeader && (
         <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -136,11 +142,11 @@ const Layout: React.FC<LayoutProps> = ({
             <div className="mt-8 pt-8 border-t border-border">
               <div className="flex flex-col sm:flex-row justify-between items-center">
                 <p className="text-sm text-muted-foreground">
-                  © 2025 AI Motivation Song Generator. Built with Next.js and AI.
+                  © 2026 AI Motivation Song Generator. Built with Next.js and AI. Powered by Vercel.
                 </p>
                 <div className="flex items-center space-x-4 mt-4 sm:mt-0">
                   <span className="text-xs text-muted-foreground">
-                    Made with ❤️ for motivation
+                    Made with ❤️ for Motivation
                   </span>
                 </div>
               </div>

@@ -42,7 +42,7 @@ export default function Home() {
           
           {/* Feature highlights */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-            <div className="flex flex-col items-center p-4 rounded-lg bg-muted/50">
+            <div className="flex flex-col items-center p-4 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/20 shadow-sm">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
                 <span className="text-2xl" role="img" aria-label="AI brain">🧠</span>
               </div>
@@ -52,7 +52,7 @@ export default function Home() {
               </p>
             </div>
             
-            <div className="flex flex-col items-center p-4 rounded-lg bg-muted/50">
+            <div className="flex flex-col items-center p-4 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/20 shadow-sm">
               <div className="w-12 h-12 bg-success/10 rounded-lg flex items-center justify-center mb-3">
                 <span className="text-2xl" role="img" aria-label="High quality">🎯</span>
               </div>
@@ -62,7 +62,7 @@ export default function Home() {
               </p>
             </div>
             
-            <div className="flex flex-col items-center p-4 rounded-lg bg-muted/50">
+            <div className="flex flex-col items-center p-4 rounded-xl bg-white/10 dark:bg-white/5 backdrop-blur-md border border-white/20 shadow-sm">
               <div className="w-12 h-12 bg-warning/10 rounded-lg flex items-center justify-center mb-3">
                 <span className="text-2xl" role="img" aria-label="Secure">🔒</span>
               </div>

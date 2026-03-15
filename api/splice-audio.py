@@ -172,14 +172,14 @@ class handler(BaseHTTPRequestHandler):
                         if has_multiple_chunks:
                             combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
                             self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
-                            # Apply 5dB volume gain to combined speech
+                            # Apply 8dB volume gain to combined speech
                             gained_speech_path = os.path.join(temp_dir, 'gained_combined_speech.mp3')
-                            self._apply_volume_gain(combined_speech_path, gained_speech_path, 5.0)
+                            self._apply_volume_gain(combined_speech_path, gained_speech_path, 8.0)
                             self.splice_intro(gained_speech_path, original_path, output_path)
                         else:
-                            # Apply 5dB volume gain to single speech chunk
+                            # Apply 8dB volume gain to single speech chunk
                             gained_speech_path = os.path.join(temp_dir, 'gained_speech.mp3')
-                            self._apply_volume_gain(speech_paths[0], gained_speech_path, 5.0)
+                            self._apply_volume_gain(speech_paths[0], gained_speech_path, 8.0)
                             self.splice_intro(gained_speech_path, original_path, output_path)
                     else:
                         # Default behavior - use distributed if multiple chunks, otherwise intro
@@ -188,9 +188,9 @@ class handler(BaseHTTPRequestHandler):
                             self.splice_distributed_pyav(speech_paths, original_path, output_path, original_duration, temp_dir)
                         else:
                             print("Default: Using intro splicing with single chunk")
-                            # Apply 5dB volume gain to single speech chunk
+                            # Apply 8dB volume gain to single speech chunk
                             gained_speech_path = os.path.join(temp_dir, 'gained_speech.mp3')
-                            self._apply_volume_gain(speech_paths[0], gained_speech_path, 5.0)
+                            self._apply_volume_gain(speech_paths[0], gained_speech_path, 8.0)
                             self.splice_intro(gained_speech_path, original_path, output_path)
                 except Exception as splice_error:
                     print(f"❌ Advanced splicing failed: {str(splice_error)}")
@@ -199,14 +199,14 @@ class handler(BaseHTTPRequestHandler):
                     if has_multiple_chunks:
                         combined_speech_path = os.path.join(temp_dir, 'combined_speech.mp3')
                         self.concatenate_audio_files(speech_paths, combined_speech_path, temp_dir)
-                        # Apply 5dB volume gain to combined speech
+                        # Apply 8dB volume gain to combined speech
                         gained_speech_path = os.path.join(temp_dir, 'gained_combined_speech.mp3')
-                        self._apply_volume_gain(combined_speech_path, gained_speech_path, 5.0)
+                        self._apply_volume_gain(combined_speech_path, gained_speech_path, 8.0)
                         self.splice_simple_concat(gained_speech_path, original_path, output_path)
                     else:
-                        # Apply 5dB volume gain to single speech chunk
+                        # Apply 8dB volume gain to single speech chunk
                         gained_speech_path = os.path.join(temp_dir, 'gained_speech.mp3')
-                        self._apply_volume_gain(speech_paths[0], gained_speech_path, 5.0)
+                        self._apply_volume_gain(speech_paths[0], gained_speech_path, 8.0)
                         self.splice_simple_concat(gained_speech_path, original_path, output_path)
                 
                 # Apply music duration limit if specified
@@ -471,9 +471,9 @@ class handler(BaseHTTPRequestHandler):
                 temp_speech = os.path.join(temp_dir, f"temp_speech_{i}.mp3")
                 self._convert_to_standard_format(chunk_path, temp_speech)
                 
-                # Apply 5dB volume gain to match Colab implementation
+                # Apply 8dB volume gain to match Colab implementation
                 gained_speech = os.path.join(temp_dir, f"gained_speech_{i}.mp3")
-                self._apply_volume_gain(temp_speech, gained_speech, 5.0)
+                self._apply_volume_gain(temp_speech, gained_speech, 8.0)
                 converted_speech.append(gained_speech)
             
             # Interleave music segments and speech chunks at calculated insertion points
