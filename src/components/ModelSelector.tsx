@@ -11,7 +11,7 @@ interface ModelSelectorProps {
 
 const MODEL_INFO = {
   eleven_multilingual_v2: {
-    name: 'Multilingual v2',
+    name: 'Eleven Multilingual v2',
     description: 'Best quality, most stable',
     speed: 'Slow',
     quality: 'Highest',
@@ -19,7 +19,7 @@ const MODEL_INFO = {
     recommended: 'Quality'
   },
   eleven_flash_v2_5: {
-    name: 'Flash v2.5',
+    name: 'Eleven Flash v2.5',
     description: 'Ultra-fast, low latency',
     speed: 'Fastest',
     quality: 'Good',
@@ -27,7 +27,7 @@ const MODEL_INFO = {
     recommended: 'Speed'
   },
   eleven_turbo_v2_5: {
-    name: 'Turbo v2.5',
+    name: 'Eleven Turbo v2.5',
     description: 'Balanced quality and speed',
     speed: 'Fast',
     quality: 'High',
@@ -35,7 +35,7 @@ const MODEL_INFO = {
     recommended: 'Balanced'
   },
   eleven_v3: {
-    name: 'v3 (Alpha)',
+    name: 'Eleven v3',
     description: 'Most expressive, experimental',
     speed: 'Medium',
     quality: 'Highest',

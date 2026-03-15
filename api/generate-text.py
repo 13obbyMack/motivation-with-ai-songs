@@ -19,7 +19,7 @@ def create_user_prompt(user_data: dict) -> str:
     sponsor = user_data.get('sponsor')
     custom_instructions = user_data.get('customInstructions')
     
-    prompt = f"Create 5 short, self-contained motivational messages for {name} who is engaged in {physical_activity}."
+    prompt = f"Create 6 short, self-contained motivational messages for {name} who is engaged in {physical_activity}."
     
     if song_title:
         prompt += f" They are listening to {song_title} during their activity."
@@ -36,7 +36,7 @@ Each message must:
 - Be completely self-contained and impactful on its own (60-90 words each)
 - Make sense when heard at ANY point during the activity — beginning, middle, or end
 - NOT reference "earlier" or "now" or imply a sequence or progression
-- Focus on a different motivational angle: e.g. mental toughness, physical form, purpose, identity, pushing limits
+- Stay true to character based on unique personality traits
 - Feel like a direct, in-the-moment callout to {name} during {physical_activity}
 - Be raw, authentic, and punchy — no filler
 

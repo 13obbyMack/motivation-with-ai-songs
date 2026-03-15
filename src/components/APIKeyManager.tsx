@@ -233,7 +233,7 @@ const APIKeyManager: React.FC<APIKeyManagerProps> = ({
           {/* YouTube Cookies */}
           <div>
             <label htmlFor="youtube-cookies" className="block text-sm font-medium text-foreground mb-2">
-              YouTube Cookies (Optional)
+              YouTube Cookies (Required)
             </label>
             <textarea
               id="youtube-cookies"
