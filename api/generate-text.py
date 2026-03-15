@@ -40,7 +40,7 @@ Each message must:
 - Feel like a direct, in-the-moment callout to {name} during {physical_activity}
 - Be raw, authentic, and punchy — no filler
 
-Format your response as exactly 5 separate paragraphs with a blank line between each. No numbering, no headers."""
+Format your response as exactly 6 separate paragraphs with a blank line between each. No numbering, no headers."""
     
     return prompt
 
