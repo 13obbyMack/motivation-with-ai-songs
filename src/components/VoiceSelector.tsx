@@ -82,31 +82,31 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
         {voices.length} voices available
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
         {voices.map((voice) => (
           <div
             key={voice.voice_id}
-            className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+            className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
               selectedVoiceId === voice.voice_id
                 ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
                 : 'border-border hover:border-border/80'
             }`}
             onClick={() => onVoiceSelected(voice.voice_id)}
           >
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-medium text-foreground truncate">{voice.name}</h3>
-              <span className="text-xs bg-muted text-muted-foreground px-2 py-1 rounded-full ml-2 flex-shrink-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h3 className="font-medium text-foreground text-sm leading-snug break-words min-w-0">{voice.name}</h3>
+              <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full flex-shrink-0 whitespace-nowrap">
                 {voice.category}
               </span>
             </div>
             
             {voice.description && (
-              <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{voice.description}</p>
+              <p className="text-xs text-muted-foreground mb-2 leading-relaxed break-words">{voice.description}</p>
             )}
 
             <div className="flex items-center">
               {selectedVoiceId === voice.voice_id && (
-                <div className="w-2 h-2 bg-primary rounded-full mr-2"></div>
+                <div className="w-2 h-2 bg-primary rounded-full mr-2 flex-shrink-0"></div>
               )}
               <span className="text-xs text-muted-foreground">
                 {selectedVoiceId === voice.voice_id ? 'Selected' : 'Click to select'}

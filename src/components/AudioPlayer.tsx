@@ -25,6 +25,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [seekTarget, setSeekTarget] = useState<number | null>(null);
   const [isBuffering, setIsBuffering] = useState(false);
   const [bufferedRanges, setBufferedRanges] = useState<TimeRanges | null>(null);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement>(null);
   const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -202,6 +204,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
       }
     }
   }, [hasError, duration]);
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume;
+      audioRef.current.muted = newVolume === 0;
+    }
+  };
+
+  const toggleMute = () => {
+    if (!audioRef.current) return;
+    const nextMuted = !isMuted;
+    setIsMuted(nextMuted);
+    audioRef.current.muted = nextMuted;
+  };
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -476,6 +495,32 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               )}
             </div>
           </div>
+        </div>
+
+        {/* Volume control */}
+        <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="text-lg w-8 text-center text-muted-foreground hover:text-foreground transition-colors"
+            title={isMuted ? 'Unmute' : 'Mute'}
+          >
+            {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
+          </button>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.02}
+            value={isMuted ? 0 : volume}
+            onChange={handleVolumeChange}
+            className="flex-1 h-2 accent-primary cursor-pointer"
+            aria-label="Volume"
+            title={`Volume: ${Math.round((isMuted ? 0 : volume) * 100)}%`}
+          />
+          <span className="text-xs text-muted-foreground w-8 text-right font-mono">
+            {Math.round((isMuted ? 0 : volume) * 100)}%
+          </span>
         </div>
 
         <div className="flex space-x-3 pt-2">

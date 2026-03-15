@@ -32,7 +32,7 @@ def create_user_prompt(user_data: dict) -> str:
     
     prompt += f"""
 
-Always announce who you are based on the {character_prompt} in the first message.
+Always announce who you are based on the character prompt in the first message.
 
 Each message must:
 - Be completely self-contained and impactful on its own (60-90 words each)
