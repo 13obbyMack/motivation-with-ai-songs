@@ -141,7 +141,7 @@
   }
 }
 
-@theme inline {
+@theme {
   /* Base colors using CSS custom properties */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -188,7 +188,7 @@
   --font-mono: var(--font-geist-mono);
   
   /* Border radius */
-  --radius: var(--radius);
+  --radius: 0.5rem;
 }
 
 /* Base styles */
