@@ -33,9 +33,21 @@ interface AppProviderProps {
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [apiKeys, setApiKeysState] = useState<APIKeys | null>(null);
-  const [theme, setThemeState] = useState<"light" | "dark" | "system">(
-    "system"
-  );
+  // Initialize theme directly from localStorage to avoid a two-render race
+  // where the default "system" value fires the apply-theme effect before the
+  // stored preference is loaded.
+  const [theme, setThemeState] = useState<"light" | "dark" | "system">(() => {
+    if (typeof window === "undefined") return "system";
+    try {
+      const stored = localStorage.getItem("ai-song-theme");
+      if (stored && ["light", "dark", "system"].includes(stored)) {
+        return stored as "light" | "dark" | "system";
+      }
+    } catch {
+      // localStorage unavailable
+    }
+    return "system";
+  });
   const [error, setError] = useState<string | null>(null);
 
   // Load API keys from sessionStorage on mount
@@ -47,18 +59,6 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       }
     } catch (err) {
       console.warn("Failed to load stored API keys:", err);
-    }
-  }, []);
-
-  // Load theme from localStorage on mount
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("ai-song-theme");
-      if (stored && ["light", "dark", "system"].includes(stored)) {
-        setThemeState(stored as "light" | "dark" | "system");
-      }
-    } catch (err) {
-      console.warn("Failed to load stored theme:", err);
     }
   }, []);
 
