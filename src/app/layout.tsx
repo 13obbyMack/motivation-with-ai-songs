@@ -47,14 +47,17 @@ export default function RootLayout({
                   var root = document.documentElement;
                   
                   if (theme === 'system') {
+                    // No data-theme attribute — let CSS @media handle it
                     var isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
                     if (isDark) {
-                      root.setAttribute('data-theme', 'dark');
                       root.classList.add('dark');
                     }
                   } else if (theme === 'dark') {
                     root.setAttribute('data-theme', 'dark');
                     root.classList.add('dark');
+                  } else {
+                    // Explicitly mark light so the @media dark override won't apply
+                    root.setAttribute('data-theme', 'light');
                   }
                 } catch (e) {}
               })();

@@ -96,9 +96,9 @@
   --form-success: #22c55e;
 }
 
-/* Auto dark mode based on system preference */
+/* Auto dark mode based on system preference (only when no explicit theme is set) */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --background: #020617;
     --foreground: #f8fafc;
     --card: #0f172a;

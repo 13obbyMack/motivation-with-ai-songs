@@ -67,27 +67,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     const root = document.documentElement;
 
     const applyTheme = () => {
+      root.classList.remove("dark");
+
       if (theme === "system") {
-        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-        if (mediaQuery.matches) {
-          root.setAttribute("data-theme", "dark");
+        // Remove data-theme entirely so the CSS @media prefers-color-scheme
+        // rule can take effect via :root:not([data-theme="light"]):not([data-theme="dark"])
+        root.removeAttribute("data-theme");
+        const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        if (isDark) {
           root.classList.add("dark");
-        } else {
-          root.removeAttribute("data-theme");
-          root.classList.remove("dark");
         }
+      } else if (theme === "dark") {
+        root.setAttribute("data-theme", "dark");
+        root.classList.add("dark");
       } else {
-        if (theme === "dark") {
-          root.setAttribute("data-theme", "dark");
-          root.classList.add("dark");
-        } else {
-          root.removeAttribute("data-theme");
-          root.classList.remove("dark");
-        }
+        // Explicitly set data-theme="light" so the @media dark override
+        // selector :root:not([data-theme="light"]) does NOT match.
+        root.setAttribute("data-theme", "light");
       }
     };
 
-    // Apply theme immediately
     applyTheme();
 
     if (theme === "system") {
