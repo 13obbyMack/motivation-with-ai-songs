@@ -19,7 +19,7 @@ def create_user_prompt(user_data: dict) -> str:
     sponsor = user_data.get('sponsor')
     custom_instructions = user_data.get('customInstructions')
     
-    prompt = f"Create 6 short, self-contained, badass motivational messages for {name} who is engaged in {physical_activity}."
+    prompt = f"Create 6 badass motivational pep talks for {name} who is engaged in {physical_activity}."
     
     if song_title:
         prompt += f" They are listening to {song_title} during their activity."
@@ -35,7 +35,7 @@ def create_user_prompt(user_data: dict) -> str:
 Always announce who you are based on the character prompt in the first message.
 
 Each message must:
-- Be completely self-contained and impactful on its own (60-90 words each)
+- Be completely unique, self-contained, and impactful on its own (60-90 words each)
 - Make sense when heard at ANY point during the activity — beginning, middle, or end
 - NOT reference "earlier" or "now" or imply a sequence or progression
 - Feel like a direct, in-the-moment callout to {name} during {physical_activity}
