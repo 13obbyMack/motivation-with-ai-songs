@@ -436,6 +436,14 @@ export default function Home() {
                       <p className="text-sm text-muted-foreground">
                         Simply paste any YouTube URL to use as background music. 
                         The system will handle audio extraction and processing.
+                        YouTube Cookies are required.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <h4 className="font-medium text-foreground mb-1">Upload Custom Songs</h4>
+                      <p className="text-sm text-muted-foreground">
+                        You can upload your own songs to use for the generation.
+                        The system will handle audio extraction and processing.
                       </p>
                     </div>
                   </div>

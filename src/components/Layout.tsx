@@ -53,7 +53,7 @@ const Layout: React.FC<LayoutProps> = ({
                       AI Motivation Song Generator
                     </h1>
                     <p className="text-xs text-muted-foreground">
-                      Personalized motivational songs
+                      Personalized Motivational Songs
                     </p>
                   </div>
                 </div>
