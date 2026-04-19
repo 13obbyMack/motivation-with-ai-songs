@@ -105,13 +105,13 @@ class handler(BaseHTTPRequestHandler):
             # Generate text
             try:
                 completion = client.chat.completions.create(
-                    model='gpt-4o',
+                    model='gpt-5.4',
                     messages=[
                         {'role': 'system', 'content': character_prompt},
                         {'role': 'user', 'content': user_prompt}
                     ],
                     max_tokens=1000,
-                    temperature=0.8,
+                    temperature=1.0,
                     presence_penalty=0.1,
                     frequency_penalty=0.1
                 )
