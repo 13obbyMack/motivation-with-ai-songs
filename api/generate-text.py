@@ -35,13 +35,12 @@ def create_user_prompt(user_data: dict) -> str:
 Always announce who you are based on the character prompt in the first message.
 
 Each message must:
-- Be completely unique, self-contained, and impactful on its own (60-90 words each)
+- Be completely unique, self-contained, and impactful on its own (90-120 words each)
 - Make sense when heard at ANY point during the activity — beginning, middle, or end
 - NOT reference "earlier" or "now" or imply a sequence or progression
-- Feel like a direct, in-the-moment callout to {name} during {physical_activity}
-- Be raw, authentic, and punchy — no filler or filter
+- Be personal, raw, authentic, and punchy — no filler or filter
 
-Format your response as exactly 6 separate paragraphs with a blank line between each. No numbering, no headers."""
+Format your response as exactly 5 separate paragraphs with a blank line between each. No numbering, no headers."""
     
     return prompt
 
