@@ -110,10 +110,7 @@ class handler(BaseHTTPRequestHandler):
                         {'role': 'system', 'content': character_prompt},
                         {'role': 'user', 'content': user_prompt}
                     ],
-                    max_tokens=1000,
-                    temperature=1.0,
-                    presence_penalty=0.1,
-                    frequency_penalty=0.1
+                    max_completion_tokens=1000
                 )
                 
                 motivational_text = completion.choices[0].message.content
