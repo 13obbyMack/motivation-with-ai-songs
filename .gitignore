@@ -10,6 +10,17 @@
 !.yarn/releases
 !.yarn/versions
 
+# IDE and agent ignore rules
+.windsurf/
+.kiro/
+.vscode/
+.cursor/
+.antigravity/
+.gemini/
+.claude/
+.codex/
+.opencode/
+
 # testing
 /coverage
 
@@ -24,11 +35,9 @@
 /build
 
 # misc
-/.kiro/
 VERCEL_DEPLOYMENT_GUIDE.md
 .DS_Store
 *.pem
-/.vscode/
 /docs
 
 # Keep these for QuickJS setup

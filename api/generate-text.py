@@ -134,10 +134,11 @@ class handler(BaseHTTPRequestHandler):
                 
             except openai.AuthenticationError:
                 self.send_error_response(401, 'Invalid or expired OpenAI API key')
-            except openai.RateLimitError:
-                self.send_error_response(429, 'OpenAI API rate limit exceeded. Please try again later.')
-            except openai.InsufficientQuotaError:
-                self.send_error_response(402, 'Insufficient OpenAI API quota. Please check your billing.')
+            except openai.RateLimitError as e:
+                if hasattr(e, 'code') and e.code == 'insufficient_quota':
+                    self.send_error_response(402, 'Insufficient OpenAI API quota. Please check your billing.')
+                else:
+                    self.send_error_response(429, 'OpenAI API rate limit exceeded. Please try again later.')
             except Exception as e:
                 self.send_error_response(500, f'OpenAI API error: {str(e)}')
                 
