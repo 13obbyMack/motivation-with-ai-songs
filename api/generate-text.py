@@ -19,10 +19,7 @@ def create_user_prompt(user_data: dict) -> str:
     sponsor = user_data.get('sponsor')
     custom_instructions = user_data.get('customInstructions')
     
-    prompt = (
-        f"Create 5 high-energy, funny, character-driven motivational pep talks for {name} who is engaged in {physical_activity}."
-        f"These should feel intense, funny, character-driven, and genuinely entertaining — like a larger-than-life coach, warrior, villain, wizard, or chaotic legend is personally hyping them up."
-    )
+    prompt = f"Create 5 high-energy, funny, character-driven motivational pep talks for {name} who is engaged in {physical_activity}."
     
     if song_title:
         prompt += f" They are listening to {song_title} during their activity."
@@ -38,6 +35,7 @@ def create_user_prompt(user_data: dict) -> str:
 Always announce who you are based on the character prompt in the FIRST pep talk only.
 
 Each pep talk must:
+- Strongly reflect the chosen character's personality, attitude, and speaking style
 - Make each pep talk feel like it was delivered by a bold, slightly unhinged but lovable character.
 - Blend intensity with humor: every message should contain at least one genuinely funny, unexpected line.
 - Use vivid imagery, exaggerated comparisons, and playful trash talk toward laziness, doubt, or excuses.
