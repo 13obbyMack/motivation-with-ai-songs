@@ -35,9 +35,9 @@ def create_user_prompt(user_data: dict) -> str:
     
     prompt += f"""
 
-Always announce who you are based on the character prompt in the first message.
+Always announce who you are based on the character prompt in the FIRST pep talk only.
 
-Rules for each message:
+Each pep talk must:
 - Make each pep talk feel like it was delivered by a bold, slightly unhinged but lovable character.
 - Blend intensity with humor: every message should contain at least one genuinely funny, unexpected line.
 - Use vivid imagery, exaggerated comparisons, and playful trash talk toward laziness, doubt, or excuses.
