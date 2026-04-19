@@ -3,23 +3,18 @@
   "functions": {
     "api/extract-audio.py": {
       "maxDuration": 300
-      // "memory": 1024
     },
     "api/generate-text.py": {
       "maxDuration": 60
-      // "memory": 512
     },
     "api/generate-speech.py": {
       "maxDuration": 180
-      // "memory": 1024
     },
     "api/get-voices.py": {
       "maxDuration": 30
-      // "memory": 512
     },
     "api/splice-audio.py": {
       "maxDuration": 240
-      // "memory": 1024
     }
   },
   "framework": "nextjs",
