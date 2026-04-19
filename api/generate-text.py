@@ -19,7 +19,10 @@ def create_user_prompt(user_data: dict) -> str:
     sponsor = user_data.get('sponsor')
     custom_instructions = user_data.get('customInstructions')
     
-    prompt = f"Create 6 badass motivational pep talks for {name} who is engaged in {physical_activity}."
+    prompt = (
+        f"Create 5 high-energy, funny, character-driven motivational pep talks for {name} who is engaged in {physical_activity}."
+        f"These should feel intense, funny, character-driven, and genuinely entertaining — like a larger-than-life coach, warrior, villain, wizard, or chaotic legend is personally hyping them up."
+    )
     
     if song_title:
         prompt += f" They are listening to {song_title} during their activity."
@@ -34,11 +37,12 @@ def create_user_prompt(user_data: dict) -> str:
 
 Always announce who you are based on the character prompt in the first message.
 
-Each message must:
-- Be completely unique, self-contained, and impactful on its own (90-120 words each)
-- Make sense when heard at ANY point during the activity — beginning, middle, or end
-- NOT reference "earlier" or "now" or imply a sequence or progression
-- Be personal, raw, authentic, and punchy — no filler or filter
+Rules for each message:
+- Make each pep talk feel like it was delivered by a bold, slightly unhinged but lovable character.
+- Blend intensity with humor: every message should contain at least one genuinely funny, unexpected line.
+- Use vivid imagery, exaggerated comparisons, and playful trash talk toward laziness, doubt, or excuses.
+- Avoid generic phrases like “you got this,” “keep pushing,” “believe in yourself,” unless they are twisted into something more original.
+- Make the character sound entertaining, theatrical, and memorable without becoming too goofy.
 
 Format your response as exactly 5 separate paragraphs with a blank line between each. No numbering, no headers."""
     
