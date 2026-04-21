@@ -473,7 +473,7 @@ export default function Home() {
                     <div className="p-3 rounded-lg bg-muted/50">
                       <h4 className="font-medium text-foreground mb-1">How long does generation take?</h4>
                       <p className="text-sm text-muted-foreground">
-                        Typically 30-60 seconds depending on content length 
+                        Typically 60-120 seconds depending on content length 
                         and current API response times.
                       </p>
                     </div>
