@@ -38,7 +38,6 @@ Each pep talk must:
 - Strongly reflect the chosen character's personality, attitude, and speaking style
 - Make each pep talk feel like it was delivered by a bold, slightly unhinged but lovable character.
 - Blend intensity with humor: every message should contain at least one genuinely funny, unexpected line.
-- Use vivid imagery, exaggerated comparisons, and playful trash talk toward laziness, doubt, or excuses.
 - Avoid generic phrases like “you got this,” “keep pushing,” “believe in yourself,” unless they are twisted into something more original.
 - Make the character sound entertaining, theatrical, and memorable without becoming too goofy.
 
